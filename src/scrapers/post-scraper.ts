@@ -7,7 +7,8 @@ import {
   calculateEngagementRate,
   extractUserFromElement,
   extractMediaFromElement,
-  parseTwitterDate
+  parseTwitterDate,
+  isAdElement
 } from "./utils";
 
 /**
@@ -37,6 +38,11 @@ export async function scrapePosts(
       if (posts.length >= maxPosts) break;
       
       try {
+        if (await isAdElement(element)) {
+          console.log('Skipping ad post');
+          continue;
+        }
+        
         const post = await extractPostFromElement(element, page);
         
         if (post && !seenPostIds.has(post.postId)) {
@@ -210,6 +216,12 @@ export async function scrapeSinglePost(page: Page, postUrl: string): Promise<Twi
   // Find the main tweet (not replies)
   const mainTweet = await page.$('article[data-testid="tweet"]').catch(() => null);
   if (!mainTweet) return null;
+  
+  // Check if it's an ad
+  if (await isAdElement(mainTweet)) {
+    console.log('Main tweet is an ad, skipping');
+    return null;
+  }
   
   return extractPostFromElement(mainTweet, page);
 } 

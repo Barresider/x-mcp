@@ -165,4 +165,34 @@ export async function dismissPopups(page: Page) {
   for (let i = 0; i < count; i++) {
     await closeButtons.nth(i).click().catch(() => {});
   }
+}
+
+/**
+ * Check if an element is a promoted/ad tweet
+ */
+export async function isAdElement(element: any): Promise<boolean> {
+  try {
+    // Check for "Promoted" label which Twitter uses for ads
+    const promotedLabel = await element.$('span:has-text("Promoted")').catch(() => null);
+    if (promotedLabel) return true;
+    
+    // Check for promoted indicator in the element
+    const promotedIndicator = await element.$('[data-testid="placementTracking"]').catch(() => null);
+    if (promotedIndicator) return true;
+    
+    // Check for "Ad" label
+    const adLabel = await element.$('span:has-text("Ad")').catch(() => null);
+    if (adLabel) return true;
+    
+    // Check for promoted tweet indicator in the social context
+    const socialContext = await element.$('[data-testid="socialContext"]').catch(() => null);
+    if (socialContext) {
+      const contextText = await socialContext.textContent().catch(() => '');
+      if (contextText.toLowerCase().includes('promoted')) return true;
+    }
+    
+    return false;
+  } catch (error) {
+    return false;
+  }
 } 

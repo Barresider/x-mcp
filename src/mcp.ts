@@ -41,10 +41,10 @@ import {
 
 // Import comment interaction functions
 import {
-  likeComment,
   likeCommentById,
-  replyToComment,
-  unlikeComment
+  replaceCommentById,
+  replyToCommentById,
+  unlikeCommentById
 } from "./behaviors/interact-with-comment";
 
 // Validation schemas using Zod
@@ -131,24 +131,22 @@ const ReplyToPostSchema = z.object({
 });
 
 // Comment interaction schemas
-const LikeCommentSchema = z.object({
-  postUrl: z.string().url().describe("URL of the post containing the comment"),
-  commentIndex: z.number().min(0).describe("Index of the comment to like (0-based)")
+const LikeCommentByIdSchema = z.object({
+  commentUrl: z.string().url().describe("Direct URL to the comment")
 });
 
-const UnlikeCommentSchema = z.object({
-  postUrl: z.string().url().describe("URL of the post containing the comment"),
-  commentIndex: z.number().min(0).describe("Index of the comment to unlike (0-based)")
+const UnlikeCommentByIdSchema = z.object({
+  commentUrl: z.string().url().describe("Direct URL to the comment")
 });
 
-const ReplyToCommentSchema = z.object({
-  postUrl: z.string().url().describe("URL of the post containing the comment"),
-  commentIndex: z.number().min(0).describe("Index of the comment to reply to (0-based)"),
+const ReplyToCommentByIdSchema = z.object({
+  commentUrl: z.string().url().describe("Direct URL to the comment"),
   replyText: z.string().min(1).max(280).describe("Text for the reply")
 });
 
-const LikeCommentByIdSchema = z.object({
-  commentUrl: z.string().url().describe("Direct URL to the comment")
+const ReplaceCommentByIdSchema = z.object({
+  commentUrl: z.string().url().describe("Direct URL to the comment"),
+  newText: z.string().min(1).max(280).describe("The new text to replace the comment with")
 });
 
 export class TwitterMCPServer {
@@ -544,69 +542,6 @@ export class TwitterMCPServer {
         } as Tool,
         // Comment interaction tools
         {
-          name: 'like_comment',
-          description: 'Like a specific comment on a post',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              postUrl: {
-                type: 'string',
-                description: 'URL of the post containing the comment'
-              },
-              commentIndex: {
-                type: 'number',
-                description: 'Index of the comment to like (0-based)',
-                minimum: 0
-              }
-            },
-            required: ['postUrl', 'commentIndex']
-          }
-        } as Tool,
-        {
-          name: 'unlike_comment',
-          description: 'Unlike a specific comment on a post',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              postUrl: {
-                type: 'string',
-                description: 'URL of the post containing the comment'
-              },
-              commentIndex: {
-                type: 'number',
-                description: 'Index of the comment to unlike (0-based)',
-                minimum: 0
-              }
-            },
-            required: ['postUrl', 'commentIndex']
-          }
-        } as Tool,
-        {
-          name: 'reply_to_comment',
-          description: 'Reply to a specific comment',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              postUrl: {
-                type: 'string',
-                description: 'URL of the post containing the comment'
-              },
-              commentIndex: {
-                type: 'number',
-                description: 'Index of the comment to reply to (0-based)',
-                minimum: 0
-              },
-              replyText: {
-                type: 'string',
-                description: 'Text for the reply',
-                minLength: 1,
-                maxLength: 280
-              }
-            },
-            required: ['postUrl', 'commentIndex', 'replyText']
-          }
-        } as Tool,
-        {
           name: 'like_comment_by_id',
           description: 'Like a comment by its direct URL',
           inputSchema: {
@@ -618,6 +553,60 @@ export class TwitterMCPServer {
               }
             },
             required: ['commentUrl']
+          }
+        } as Tool,
+        {
+          name: 'unlike_comment_by_id',
+          description: 'Unlike a comment by its direct URL',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              commentUrl: {
+                type: 'string',
+                description: 'Direct URL to the comment'
+              }
+            },
+            required: ['commentUrl']
+          }
+        } as Tool,
+        {
+          name: 'reply_to_comment_by_id',
+          description: 'Reply to a comment with a comment',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              commentUrl: {
+                type: 'string',
+                description: 'Direct URL to the comment'
+              },
+              replyText: {
+                type: 'string',
+                description: 'Text for the reply',
+                minLength: 1,
+                maxLength: 280
+              }
+            },
+            required: ['commentUrl', 'replyText']
+          }
+        } as Tool,
+        {
+          name: 'replace_comment_by_id',
+          description: 'Replace/edit a comment by its direct URL (Note: Twitter/X may not support comment editing)',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              commentUrl: {
+                type: 'string',
+                description: 'Direct URL to the comment'
+              },
+              newText: {
+                type: 'string',
+                description: 'The new text to replace the comment with',
+                minLength: 1,
+                maxLength: 280
+              }
+            },
+            required: ['commentUrl', 'newText']
           }
         } as Tool
       ]
@@ -668,14 +657,14 @@ export class TwitterMCPServer {
           case 'reply_to_post':
             return await this.handleReplyToPost(args);
           // Comment interaction tools
-          case 'like_comment':
-            return await this.handleLikeComment(args);
-          case 'unlike_comment':
-            return await this.handleUnlikeComment(args);
-          case 'reply_to_comment':
-            return await this.handleReplyToComment(args);
           case 'like_comment_by_id':
             return await this.handleLikeCommentById(args);
+          case 'unlike_comment_by_id':
+            return await this.handleUnlikeCommentById(args);
+          case 'reply_to_comment_by_id':
+            return await this.handleReplyToCommentById(args);
+          case 'replace_comment_by_id':
+            return await this.handleReplaceCommentById(args);
           default:
             throw new McpError(
               ErrorCode.MethodNotFound,
@@ -1168,66 +1157,6 @@ export class TwitterMCPServer {
   }
 
   // Comment interaction handlers
-  private async handleLikeComment(args: unknown) {
-    const result = LikeCommentSchema.safeParse(args);
-    if (!result.success) {
-      throw new McpError(
-        ErrorCode.InvalidParams,
-        `Invalid parameters: ${result.error.message}`
-      );
-    }
-
-    const page = await this.ensureAuthenticated();
-    await likeComment(page, result.data.postUrl, result.data.commentIndex);
-    
-    return {
-      content: [{
-        type: 'text',
-        text: `Successfully liked comment #${result.data.commentIndex} on post: ${result.data.postUrl}`
-      }] as TextContent[]
-    };
-  }
-
-  private async handleUnlikeComment(args: unknown) {
-    const result = UnlikeCommentSchema.safeParse(args);
-    if (!result.success) {
-      throw new McpError(
-        ErrorCode.InvalidParams,
-        `Invalid parameters: ${result.error.message}`
-      );
-    }
-
-    const page = await this.ensureAuthenticated();
-    await unlikeComment(page, result.data.postUrl, result.data.commentIndex);
-    
-    return {
-      content: [{
-        type: 'text',
-        text: `Successfully unliked comment #${result.data.commentIndex} on post: ${result.data.postUrl}`
-      }] as TextContent[]
-    };
-  }
-
-  private async handleReplyToComment(args: unknown) {
-    const result = ReplyToCommentSchema.safeParse(args);
-    if (!result.success) {
-      throw new McpError(
-        ErrorCode.InvalidParams,
-        `Invalid parameters: ${result.error.message}`
-      );
-    }
-
-    const page = await this.ensureAuthenticated();
-    await replyToComment(page, result.data.postUrl, result.data.commentIndex, result.data.replyText);
-    
-    return {
-      content: [{
-        type: 'text',
-        text: `Successfully replied to comment #${result.data.commentIndex} on post ${result.data.postUrl} with: "${result.data.replyText}"`
-      }] as TextContent[]
-    };
-  }
-
   private async handleLikeCommentById(args: unknown) {
     const result = LikeCommentByIdSchema.safeParse(args);
     if (!result.success) {
@@ -1244,6 +1173,66 @@ export class TwitterMCPServer {
       content: [{
         type: 'text',
         text: `Successfully liked comment: ${result.data.commentUrl}`
+      }] as TextContent[]
+    };
+  }
+
+  private async handleUnlikeCommentById(args: unknown) {
+    const result = UnlikeCommentByIdSchema.safeParse(args);
+    if (!result.success) {
+      throw new McpError(
+        ErrorCode.InvalidParams,
+        `Invalid parameters: ${result.error.message}`
+      );
+    }
+
+    const page = await this.ensureAuthenticated();
+    await unlikeCommentById(page, result.data.commentUrl);
+    
+    return {
+      content: [{
+        type: 'text',
+        text: `Successfully unliked comment: ${result.data.commentUrl}`
+      }] as TextContent[]
+    };
+  }
+
+  private async handleReplyToCommentById(args: unknown) {
+    const result = ReplyToCommentByIdSchema.safeParse(args);
+    if (!result.success) {
+      throw new McpError(
+        ErrorCode.InvalidParams,
+        `Invalid parameters: ${result.error.message}`
+      );
+    }
+
+    const page = await this.ensureAuthenticated();
+    await replyToCommentById(page, result.data.commentUrl, result.data.replyText);
+    
+    return {
+      content: [{
+        type: 'text',
+        text: `Successfully replied to comment ${result.data.commentUrl} with: "${result.data.replyText}"`
+      }] as TextContent[]
+    };
+  }
+
+  private async handleReplaceCommentById(args: unknown) {
+    const result = ReplaceCommentByIdSchema.safeParse(args);
+    if (!result.success) {
+      throw new McpError(
+        ErrorCode.InvalidParams,
+        `Invalid parameters: ${result.error.message}`
+      );
+    }
+
+    const page = await this.ensureAuthenticated();
+    await replaceCommentById(page, result.data.commentUrl, result.data.newText);
+    
+    return {
+      content: [{
+        type: 'text',
+        text: `Successfully replaced comment: ${result.data.commentUrl} with: "${result.data.newText}"`
       }] as TextContent[]
     };
   }

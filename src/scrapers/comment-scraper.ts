@@ -7,7 +7,8 @@ import {
   extractUserFromElement,
   parseTwitterDate,
   dismissPopups,
-  extractMediaFromElement
+  extractMediaFromElement,
+  isAdElement
 } from "./utils";
 
 /**
@@ -48,6 +49,11 @@ export async function scrapeComments(
       
       const element = replyElements[i];
       try {
+        if (await isAdElement(element)) {
+          console.log('Skipping ad comment');
+          continue;
+        }
+        
         const comment = await extractCommentFromElement(element, page);
         
         if (comment && !seenCommentIds.has(comment.commentId)) {
@@ -85,6 +91,7 @@ async function extractCommentFromElement(element: any, page: Page): Promise<Twit
     if (!commentIdMatch) return null;
     
     const commentId = commentIdMatch[1];
+    const commentUrl = `https://twitter.com${href}`;
     
     // Extract author
     const author = await extractUserFromElement(element);
@@ -110,18 +117,34 @@ async function extractCommentFromElement(element: any, page: Page): Promise<Twit
     const replyText = await replyButton?.textContent() || '0';
     const repliesCount = parseCount(replyText);
     
-    // Check if this is a reply to another comment
-    const replyingToElement = await element.$('[data-testid="inReplyToAvatar"]');
-    const parentCommentId = replyingToElement ? 'parent' : undefined; // Would need more logic to get actual parent ID
+    // Check if this is a reply to another comment and extract parent URL if available
+    let parentCommentId: string | undefined;
+    let parentCommentUrl: string | undefined;
+    
+    // Look for "Replying to" section which contains parent tweet info
+    const replyingToLinks = await element.$$('a[href*="/status/"]');
+    for (const link of replyingToLinks) {
+      const linkHref = await link.getAttribute('href');
+      if (linkHref && linkHref !== href) {
+        const parentMatch = linkHref.match(/\/status\/(\d+)/);
+        if (parentMatch) {
+          parentCommentId = parentMatch[1];
+          parentCommentUrl = `https://twitter.com${linkHref}`;
+          break;
+        }
+      }
+    }
     
     return {
       commentId,
+      commentUrl,
       author,
       content,
       timestamp,
       likesCount,
       repliesCount,
       parentCommentId,
+      parentCommentUrl,
       media: media.length > 0 ? media : undefined
     };
   } catch (error) {
@@ -147,7 +170,13 @@ export async function scrapeCommentThread(
   
   // First article is usually the main comment
   const mainCommentElement = await page.$('article[data-testid="tweet"]').catch(() => null);
-  const mainComment = mainCommentElement ? await extractCommentFromElement(mainCommentElement, page) : null;
+  let mainComment: TwitterComment | null = null;
+  
+  if (mainCommentElement && !(await isAdElement(mainCommentElement))) {
+    mainComment = await extractCommentFromElement(mainCommentElement, page);
+  } else if (mainCommentElement && await isAdElement(mainCommentElement)) {
+    console.log('Main comment is an ad, skipping');
+  }
   
   // Get all replies
   const replies = await scrapeComments(page, commentUrl, options);

@@ -57,12 +57,14 @@ export interface TwitterProfile extends TwitterUser {
 
 export interface TwitterComment {
   commentId: string;
+  commentUrl: string;
   author: TwitterUser;
   content: string;
   timestamp: Date;
   likesCount: number;
   repliesCount: number;
   parentCommentId?: string;
+  parentCommentUrl?: string;
   media?: TwitterMedia[];
 }
 

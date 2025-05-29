@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
-import { getAuthenticatedPage, login } from './behaviors/login';
-import { postTweet, postThread, likePost, unlikePost, bookmarkPost, unbookmarkPost, retweetPost, unretweetPost, quoteTweet, replyToPost } from './behaviors/interact-with-post';
-import { likeComment, likeCommentById, replyToComment, unlikeComment } from './behaviors/interact-with-comment';
-import { scrapePosts, scrapeProfile, scrapeComments, searchTwitter, SearchPresets, scrapeTimeline, scrapeTrendingTopics, getTopComments } from './scrapers';
-import { TweetWithMedia } from './types';
 import { Page } from 'playwright';
+import { likeCommentById, replaceCommentById, replyToCommentById, unlikeCommentById } from './behaviors/interact-with-comment';
+import { bookmarkPost, likePost, postThread, postTweet, quoteTweet, replyToPost, retweetPost, unbookmarkPost, unlikePost, unretweetPost } from './behaviors/interact-with-post';
+import { getAuthenticatedPage, login } from './behaviors/login';
+import { SearchPresets, getTopComments, scrapeComments, scrapePosts, scrapeProfile, scrapeTimeline, scrapeTrendingTopics, searchTwitter } from './scrapers';
+import { TweetWithMedia } from './types';
 
 const program = new Command();
 
@@ -51,6 +51,7 @@ program
       console.error('❌ Login failed:', error);
       process.exit(1);
     }
+    process.exit(0);
   });
 
 // Tweet command
@@ -72,6 +73,7 @@ program
       console.error('❌ Tweet failed:', error);
       process.exit(1);
     }
+    process.exit(0);
   });
 
 // Thread command
@@ -89,6 +91,7 @@ program
       console.error('❌ Thread failed:', error);
       process.exit(1);
     }
+    process.exit(0);
   });
 
 // Scrape posts command
@@ -111,6 +114,7 @@ program
       console.error('❌ Scraping failed:', error);
       process.exit(1);
     }
+    process.exit(0);
   });
 
 // Scrape profile command
@@ -144,6 +148,7 @@ program
       console.error('❌ Profile scraping failed:', error);
       process.exit(1);
     }
+    process.exit(0);
   });
 
 // Scrape comments command
@@ -167,6 +172,7 @@ program
       console.error('❌ Comment scraping failed:', error);
       process.exit(1);
     }
+    process.exit(0);
   });
 
 // Search command
@@ -189,6 +195,7 @@ program
       console.error('❌ Search failed:', error);
       process.exit(1);
     }
+    process.exit(0);
   });
 
 // Search viral command
@@ -216,6 +223,7 @@ program
       console.error('❌ Viral search failed:', error);
       process.exit(1);
     }
+    process.exit(0);
   });
 
 // Scrape timeline command
@@ -240,6 +248,7 @@ program
       console.error('❌ Timeline scraping failed:', error);
       process.exit(1);
     }
+    process.exit(0);
   });
 
 // Scrape trending command
@@ -258,6 +267,7 @@ program
       console.error('❌ Trending scraping failed:', error);
       process.exit(1);
     }
+    process.exit(0);
   });
 
 // Like post command
@@ -273,6 +283,7 @@ program
       console.error('❌ Like failed:', error);
       process.exit(1);
     }
+    process.exit(0);
   });
 
 // Unlike post command
@@ -288,6 +299,7 @@ program
       console.error('❌ Unlike failed:', error);
       process.exit(1);
     }
+    process.exit(0);
   });
 
 // Bookmark post command
@@ -303,6 +315,7 @@ program
       console.error('❌ Bookmark failed:', error);
       process.exit(1);
     }
+    process.exit(0);
   });
 
 // Unbookmark post command
@@ -318,6 +331,7 @@ program
       console.error('❌ Unbookmark failed:', error);
       process.exit(1);
     }
+    process.exit(0);
   });
 
 // Retweet post command
@@ -333,6 +347,7 @@ program
       console.error('❌ Retweet failed:', error);
       process.exit(1);
     }
+    process.exit(0);
   });
 
 // Unretweet post command
@@ -348,6 +363,7 @@ program
       console.error('❌ Unretweet failed:', error);
       process.exit(1);
     }
+    process.exit(0);
   });
 
 // Quote tweet command
@@ -364,6 +380,7 @@ program
       console.error('❌ Quote tweet failed:', error);
       process.exit(1);
     }
+    process.exit(0);
   });
 
 // Reply to post command
@@ -380,55 +397,7 @@ program
       console.error('❌ Reply failed:', error);
       process.exit(1);
     }
-  });
-
-// Like comment command
-program
-  .command('like-comment <postUrl>')
-  .description('Like a specific comment on a post')
-  .requiredOption('-i, --index <number>', 'Comment index (0-based)')
-  .action(async (postUrl: string, options: { index: string }) => {
-    try {
-      const page = await ensureAuthenticated();
-      await likeComment(page, postUrl, parseInt(options.index));
-      console.log(`✅ Successfully liked comment #${options.index} on post: ${postUrl}`);
-    } catch (error) {
-      console.error('❌ Like comment failed:', error);
-      process.exit(1);
-    }
-  });
-
-// Unlike comment command
-program
-  .command('unlike-comment <postUrl>')
-  .description('Unlike a specific comment on a post')
-  .requiredOption('-i, --index <number>', 'Comment index (0-based)')
-  .action(async (postUrl: string, options: { index: string }) => {
-    try {
-      const page = await ensureAuthenticated();
-      await unlikeComment(page, postUrl, parseInt(options.index));
-      console.log(`✅ Successfully unliked comment #${options.index} on post: ${postUrl}`);
-    } catch (error) {
-      console.error('❌ Unlike comment failed:', error);
-      process.exit(1);
-    }
-  });
-
-// Reply to comment command
-program
-  .command('reply-to-comment <postUrl>')
-  .description('Reply to a specific comment')
-  .requiredOption('-i, --index <number>', 'Comment index (0-based)')
-  .requiredOption('-t, --text <text>', 'Reply text')
-  .action(async (postUrl: string, options: { index: string; text: string }) => {
-    try {
-      const page = await ensureAuthenticated();
-      await replyToComment(page, postUrl, parseInt(options.index), options.text);
-      console.log(`✅ Successfully replied to comment #${options.index} on post ${postUrl} with: "${options.text}"`);
-    } catch (error) {
-      console.error('❌ Reply to comment failed:', error);
-      process.exit(1);
-    }
+    process.exit(0);
   });
 
 // Like comment by ID command
@@ -444,6 +413,57 @@ program
       console.error('❌ Like comment by ID failed:', error);
       process.exit(1);
     }
+    process.exit(0);
+  });
+
+// Unlike comment by ID command
+program
+  .command('unlike-comment-by-id <commentUrl>')
+  .description('Unlike a comment by its direct URL')
+  .action(async (commentUrl: string) => {
+    try {
+      const page = await ensureAuthenticated();
+      await unlikeCommentById(page, commentUrl);
+      console.log(`✅ Successfully unliked comment: ${commentUrl}`);
+    } catch (error) {
+      console.error('❌ Unlike comment by ID failed:', error);
+      process.exit(1);
+    }
+    process.exit(0);
+  });
+
+// Reply to comment by ID command
+program
+  .command('reply-to-comment-by-id <commentUrl>')
+  .description('Reply to a comment by its direct URL')
+  .requiredOption('-t, --text <text>', 'Reply text')
+  .action(async (commentUrl: string, options: { text: string }) => {
+    try {
+      const page = await ensureAuthenticated();
+      await replyToCommentById(page, commentUrl, options.text);
+      console.log(`✅ Successfully replied to comment ${commentUrl} with: "${options.text}"`);
+    } catch (error) {
+      console.error('❌ Reply to comment by ID failed:', error);
+      process.exit(1);
+    }
+    process.exit(0);
+  });
+
+// Replace comment by ID command
+program
+  .command('replace-comment-by-id <commentUrl>')
+  .description('Replace/edit a comment by its direct URL (Note: Twitter/X may not support comment editing)')
+  .requiredOption('-t, --text <text>', 'New comment text')
+  .action(async (commentUrl: string, options: { text: string }) => {
+    try {
+      const page = await ensureAuthenticated();
+      await replaceCommentById(page, commentUrl, options.text);
+      console.log(`✅ Successfully replaced comment: ${commentUrl} with: "${options.text}"`);
+    } catch (error) {
+      console.error('❌ Replace comment by ID failed:', error);
+      process.exit(1);
+    }
+    process.exit(0);
   });
 
 // Parse command line arguments
