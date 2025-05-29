@@ -14,7 +14,7 @@ import {
 import { Page } from 'playwright';
 import { z } from 'zod';
 
-import { getAuthenticatedPage, login } from "./behaviors/login";
+import { getAuthenticatedPage } from "./behaviors/login";
 import {
   getTopComments,
   scrapeComments,
@@ -200,15 +200,6 @@ export class TwitterMCPServer {
     // List available tools
     this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
       tools: [
-        {
-          name: 'login',
-          description: 'Login to Twitter/X',
-          inputSchema: {
-            type: 'object',
-            properties: {},
-            required: []
-          }
-        } as Tool,
         {
           name: 'tweet',
           description: 'Post a tweet to Twitter/X',
@@ -619,8 +610,6 @@ export class TwitterMCPServer {
 
       try {
         switch (name) {
-          case 'login':
-            return await this.handleLogin();
           case 'tweet':
             return await this.handleTweet(args);
           case 'thread':
@@ -678,16 +667,6 @@ export class TwitterMCPServer {
   }
 
   // Tool handlers
-  private async handleLogin() {
-    await login();
-    return {
-      content: [{
-        type: 'text',
-        text: 'Successfully logged in to Twitter/X'
-      }] as TextContent[]
-    };
-  }
-
   private async handleTweet(args: unknown) {
     const result = TweetSchema.safeParse(args);
     if (!result.success) {

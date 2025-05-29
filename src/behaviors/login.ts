@@ -54,12 +54,43 @@ export async function getAuthenticatedPage() {
     headless: false,
     slowMo: 1000,
   });
-  const context = await browser.newContext({
-    ...devices["Desktop Chrome"],
-    storageState: authFile,
-    locale: 'en-US',
-  });
+  
+  let context;
+  try {
+    context = await browser.newContext({
+      ...devices["Desktop Chrome"],
+      storageState: authFile,
+      locale: 'en-US',
+    });
+  } catch (error) {
+    console.log("No auth file found, creating new context...");
+    context = await browser.newContext({
+      ...devices["Desktop Chrome"],
+      locale: 'en-US',
+    });
+  }
+  
   const page = await context.newPage();
+  
+  // Check if we're actually logged in by navigating to the home page
+  await page.goto("https://x.com/home");
+  
+  if (page.url().includes("/i/flow/login") || page.url().includes("twitter.com/login")) {
+    console.log("Not logged in, performing automatic login...");
+    
+    const user = process.env.TWITTER_USERNAME;
+    const password = process.env.TWITTER_PASSWORD;
+    if (!user || !password) {
+      throw new Error(
+        "You need to set the TWITTER_USERNAME and TWITTER_PASSWORD env variables"
+      );
+    }
+    
+    await doLogin(page, user, password);
+    
+    console.log("Saving new auth state...");
+    await saveState(page);
+  }
 
   return {
     page,
@@ -80,7 +111,7 @@ export async function login() {
   const password = process.env.TWITTER_PASSWORD;
   if (!user || !password) {
     throw new Error(
-      "You need to set the TWITTER_USER and TWITTER_PASSWORD env variables"
+      "You need to set the TWITTER_USERNAME and TWITTER_PASSWORD env variables"
     );
   }
 
