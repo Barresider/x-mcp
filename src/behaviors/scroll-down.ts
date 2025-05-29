@@ -3,7 +3,7 @@
  * Scrolls and waits a random number of times
  */
 
-import { r } from "../../utils";
+import { r } from "../utils";
 import { Page } from "playwright";
 
 export async function scrollDown(page: Page) {

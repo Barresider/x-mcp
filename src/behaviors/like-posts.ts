@@ -1,6 +1,6 @@
 import { Page } from "playwright-core";
 import { scrollDown } from "./scroll-down";
-import { r } from "../../utils";
+import { r } from "../utils";
 
 export async function likePosts(page: Page) {
   const postsToLike = r(5, 10);
