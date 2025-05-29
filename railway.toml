@@ -1,0 +1,22 @@
+[build]
+# Specify to use the Dockerfile for building
+builder = "dockerfile"
+# Path to the Dockerfile relative to the root of the repository or context
+dockerfilePath = "Dockerfile"
+
+[deploy]
+# Command to start the application (can be omitted if CMD is set in Dockerfile)
+# startCommand = "node dist/mcp.js"
+
+# Healthcheck configuration
+healthcheckPath = "/ping"
+healthcheckTimeout = 100 # seconds
+# Optional: Add healthcheckInterval and healthcheckRetries if needed
+
+# Restart policy
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5
+
+# Optional: Specify ports if needed, though Railway usually detects EXPOSE from Dockerfile
+# [ports]
+#   3000 = "tcp" # Expose port 3000 over TCP
