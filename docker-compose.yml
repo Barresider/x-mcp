@@ -12,13 +12,13 @@ services:
       # Set to 'sse' or 'http' to use HTTP/SSE transport, leave unset for stdio
       - MCP_TRANSPORT=${MCP_TRANSPORT:-sse}
       # Port for HTTP/SSE transport (only used when MCP_TRANSPORT=sse/http)
-      - MCP_PORT=${MCP_PORT:-3333}
+      - MCP_PORT=${MCP_PORT:-3000}
     command: ["node", "dist/mcp.js"]
     profiles:
       - mcp
     ports:
       # Expose port when using HTTP/SSE transport
-      - "${MCP_PORT:-3333}:${MCP_PORT:-3333}"
+      - "${MCP_PORT:-3000}:${MCP_PORT:-3000}"
     # Keep stdio settings for backward compatibility
     stdin_open: true
     tty: true 
