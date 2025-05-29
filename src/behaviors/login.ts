@@ -37,14 +37,14 @@ function getProxyConfig() {
   if (!proxyUrl) {
     return undefined;
   }
-  
+
   const proxyConfig = {
     server: proxyUrl,
     username: process.env.PROXY_USERNAME,
     password: process.env.PROXY_PASSWORD,
   };
-  
-  if (proxyUrl.includes('@')) {
+
+  if (proxyUrl.includes("@")) {
     const match = proxyUrl.match(/^(https?:\/\/)(?:([^:]+):([^@]+)@)?(.+)$/);
     if (match) {
       proxyConfig.server = match[1] + match[4];
@@ -52,7 +52,7 @@ function getProxyConfig() {
       proxyConfig.password = proxyConfig.password || match[3];
     }
   }
-  
+
   console.log("Using proxy config:", proxyConfig);
   return {
     server: proxyConfig.server,
@@ -63,16 +63,16 @@ function getProxyConfig() {
 
 export async function getUnauthenticatedPage() {
   const proxyConfig = getProxyConfig();
-  
+
   const browser = await chromium.launch({
     timeout: 60000,
-    headless: process.env.NODE_ENV !== 'development',
+    headless: process.env.NODE_ENV !== "development",
     slowMo: 1000,
     ...(proxyConfig && { proxy: proxyConfig }),
   });
   const context = await browser.newContext({
     ...devices["Desktop Chrome"],
-    locale: 'en-US',
+    locale: "en-US",
   });
   const page = await context.newPage();
 
@@ -88,47 +88,49 @@ export async function getUnauthenticatedPage() {
 
 export async function getAuthenticatedPage() {
   const proxyConfig = getProxyConfig();
-  
+
   const browser = await chromium.launch({
     timeout: 60000,
-    headless: process.env.NODE_ENV !== 'development',
+    headless: process.env.NODE_ENV !== "development",
     slowMo: 1000,
     ...(proxyConfig && { proxy: proxyConfig }),
   });
-  
+
   let context;
   try {
     context = await browser.newContext({
       ...devices["Desktop Chrome"],
       storageState: authFile,
-      locale: 'en-US',
+      locale: "en-US",
     });
   } catch (error) {
     console.log("No auth file found, creating new context...");
     context = await browser.newContext({
       ...devices["Desktop Chrome"],
-      locale: 'en-US',
+      locale: "en-US",
     });
   }
-  
+
+  await context.addInitScript(
+    "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+  );
+
   const page = await context.newPage();
-  
+
   // Check if we're actually logged in by navigating to the home page
   await page.goto("https://x.com/home");
-  
+
   if (page.url().includes("/i/flow/login") || page.url().includes("twitter.com/login")) {
     console.log("Not logged in, performing automatic login...");
-    
+
     const user = process.env.TWITTER_USERNAME;
     const password = process.env.TWITTER_PASSWORD;
     if (!user || !password) {
-      throw new Error(
-        "You need to set the TWITTER_USERNAME and TWITTER_PASSWORD env variables"
-      );
+      throw new Error("You need to set the TWITTER_USERNAME and TWITTER_PASSWORD env variables");
     }
-    
+
     await doLogin(page, user, password);
-    
+
     console.log("Saving new auth state...");
     await saveState(page);
   }
@@ -151,9 +153,7 @@ export async function login() {
   const user = process.env.TWITTER_USERNAME;
   const password = process.env.TWITTER_PASSWORD;
   if (!user || !password) {
-    throw new Error(
-      "You need to set the TWITTER_USERNAME and TWITTER_PASSWORD env variables"
-    );
+    throw new Error("You need to set the TWITTER_USERNAME and TWITTER_PASSWORD env variables");
   }
 
   const { page, close } = await getUnauthenticatedPage();
