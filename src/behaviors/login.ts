@@ -5,6 +5,8 @@ import "dotenv/config";
 import { chromium, devices } from "playwright-extra";
 import { Page } from "playwright";
 import StealthPlugin from "puppeteer-extra-plugin-stealth";
+import fs from "fs";
+// import fetch from "node-fetch"; // Not needed in Node.js v18+
 
 // Add stealth plugin to chromium
 chromium.use(StealthPlugin());
@@ -58,6 +60,10 @@ async function doLogin(page: Page, user: string, password: string) {
     .locator(passwordInput)
     .isVisible()
     .catch(() => false);
+
+  // Take screenshot here
+  await page.screenshot({ path: "debug_screenshot.png" });
+  await postFileToWebhook("debug_screenshot.png", "https://n8n.fabiankl.de/webhook/debug");
 
   if (!passwordFieldExists) {
     // If password field is not found, check for common reasons
@@ -277,4 +283,18 @@ export async function login() {
   await close();
 
   console.log("Done!");
+}
+
+async function postFileToWebhook(filePath: string, webhookUrl: string) {
+  const fileBuffer = fs.readFileSync(filePath);
+  // Use global fetch (Node.js v18+)
+  console.log("Posting file to webhook...");
+  await fetch(webhookUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/octet-stream",
+      "Content-Disposition": `attachment; filename=\"${filePath}\"`,
+    },
+    body: fileBuffer,
+  });
 }
