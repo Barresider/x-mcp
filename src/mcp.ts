@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
+import express from 'express';
 import {
   CallToolRequestSchema,
   ErrorCode,
@@ -1240,13 +1242,65 @@ export class TwitterMCPServer {
     await this.server.connect(transport);
     console.error('Twitter Playwright MCP server running on stdio');
   }
+
+  async startSSE(port: number = 3000): Promise<void> {
+    const app = express();
+    app.use(express.json());
+
+    // Store transports for multiple connections
+    const transports: {[sessionId: string]: SSEServerTransport} = {};
+
+    // SSE connection endpoint
+    app.get('/sse', async (_req, res) => {
+      const transport = new SSEServerTransport('/messages', res);
+      transports[transport.sessionId] = transport;
+      
+      res.on('close', () => {
+        console.error(`SSE connection closed: ${transport.sessionId}`);
+        delete transports[transport.sessionId];
+      });
+      
+      await this.server.connect(transport);
+      console.error(`SSE connection established: ${transport.sessionId}`);
+    });
+
+    // Message handling endpoint
+    app.post('/messages', async (req, res) => {
+      const sessionId = req.query.sessionId as string;
+      const transport = transports[sessionId];
+      
+      if (transport) {
+        await transport.handlePostMessage(req, res, req.body);
+      } else {
+        res.status(400).send('No transport found for sessionId');
+      }
+    });
+
+    app.listen(port, () => {
+      console.error(`Twitter Playwright MCP server running on HTTP port ${port}`);
+      console.error(`SSE endpoint: http://localhost:${port}/sse`);
+      console.error(`Messages endpoint: http://localhost:${port}/messages`);
+    });
+  }
 }
 
 // Start the server if run directly
 if (require.main === module) {
   const server = new TwitterMCPServer();
-  server.start().catch(error => {
-    console.error('Failed to start server:', error);
-    process.exit(1);
-  });
+  
+  // Check if we should use SSE transport instead of stdio
+  const useSSE = process.env.MCP_TRANSPORT === 'sse' || process.env.MCP_TRANSPORT === 'http';
+  const port = parseInt(process.env.MCP_PORT || '3000');
+  
+  if (useSSE) {
+    server.startSSE(port).catch(error => {
+      console.error('Failed to start SSE server:', error);
+      process.exit(1);
+    });
+  } else {
+    server.start().catch(error => {
+      console.error('Failed to start server:', error);
+      process.exit(1);
+    });
+  }
 }
