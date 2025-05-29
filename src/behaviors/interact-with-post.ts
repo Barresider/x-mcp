@@ -236,6 +236,14 @@ export async function postTweet(page: Page, tweet: TweetWithMedia) {
   console.log("Clicking post...");
   await page.click("//span[contains(text(), 'Post')]");
 
+  const duplicateErrorLocator = page.locator('//span[contains(text(), "Whoops! You already said that.")]');
+  const isDuplicate = await duplicateErrorLocator.isVisible({ timeout: 2000 }).catch(() => false);
+  if (isDuplicate) {
+    throw new Error(
+      "Twitter/X rejected this tweet as a duplicate: 'Whoops! You already said that.' Please change the tweet text and try again."
+    );
+  }
+
   console.log("Waiting for tweet...");
   await page.waitForTimeout(r(1000, 2500));
 
