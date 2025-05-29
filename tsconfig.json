@@ -21,8 +21,7 @@
     "forceConsistentCasingInFileNames": true, /* Ensure that casing is correct in imports. */
     "skipLibCheck": true, /* Skip type checking all .d.ts files. */
     "strict": true,
-    "outDir": "./dist",
-    "allowImportingTsExtensions": true
+    "outDir": "./dist"
   },
   "include": [
     "src"

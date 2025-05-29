@@ -11,7 +11,7 @@ import { Page, ElementHandle } from "playwright";
 import { goHome } from "./behaviors/go-home";
 import { r } from "./utils";
 import { scrollDown } from "./behaviors/scroll-down";
-import { getAuthenticatedPage, saveState } from "./login";
+import { getAuthenticatedPage, saveState } from "./behaviors/login";
 import { waitSecs } from "./behaviors/wait-secs";
 
 async function doFollowFromFollowing(page: Page) {

@@ -2,38 +2,50 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
-  ListToolsRequestSchema,
   CallToolRequestSchema,
-  Tool,
   ErrorCode,
+  ListToolsRequestSchema,
   McpError,
-  TextContent
+  TextContent,
+  Tool
 } from '@modelcontextprotocol/sdk/types.js';
-import { z } from 'zod';
 import { Page } from 'playwright';
+import { z } from 'zod';
 
-// Import all the functions from your existing scripts
-import { followFromExplore } from "./follow-from-explore";
-import { followFromFollowing } from "./follow-from-following";
-import { likeFromExplore } from "./like-from-explore";
-import { login, getAuthenticatedPage } from "./login";
-import { thread } from "./thread";
-import { tweet } from "./tweet";
+import { getAuthenticatedPage, login } from "./behaviors/login";
 import {
+  getTopComments,
+  scrapeComments,
   scrapePosts,
   scrapeProfile,
-  scrapeComments,
-  searchTwitter,
   scrapeTimeline,
-  scrapeBothTimelines,
-  SearchPresets,
   scrapeTrendingTopics,
-  getTopComments,
-  TwitterPost,
-  TwitterProfile,
-  TwitterComment
+  SearchPresets,
+  searchTwitter
 } from "./scrapers";
 import { TweetWithMedia } from "./types";
+
+// Import post interaction functions
+import {
+  bookmarkPost,
+  likePost,
+  postThread,
+  postTweet,
+  quoteTweet,
+  replyToPost,
+  retweetPost,
+  unbookmarkPost,
+  unlikePost,
+  unretweetPost
+} from "./behaviors/interact-with-post";
+
+// Import comment interaction functions
+import {
+  likeComment,
+  likeCommentById,
+  replyToComment,
+  unlikeComment
+} from "./behaviors/interact-with-comment";
 
 // Validation schemas using Zod
 const LoginSchema = z.object({});
@@ -51,18 +63,6 @@ const ThreadSchema = z.object({
       media: z.array(z.string()).optional().describe("Media files for this tweet")
     })).min(2).describe("Array of tweet objects with text and optional media")
   ])
-});
-
-const FollowFromFollowingSchema = z.object({
-  count: z.number().min(1).max(50).optional().default(10).describe("Number of users to follow")
-});
-
-const LikeFromExploreSchema = z.object({
-  query: z.string().optional().describe("Search query for explore section")
-});
-
-const FollowFromExploreSchema = z.object({
-  query: z.string().optional().describe("Search query for explore section")
 });
 
 const ScrapePostsSchema = z.object({
@@ -93,6 +93,62 @@ const SearchViralSchema = z.object({
 const ScrapeTimelineSchema = z.object({
   type: z.enum(['for-you', 'following']).optional().default('for-you').describe("Timeline type to scrape"),
   maxPosts: z.number().min(1).max(100).optional().default(10).describe("Maximum number of posts to scrape")
+});
+
+// Post interaction schemas
+const LikePostSchema = z.object({
+  postUrl: z.string().url().describe("URL of the post to like")
+});
+
+const UnlikePostSchema = z.object({
+  postUrl: z.string().url().describe("URL of the post to unlike")
+});
+
+const BookmarkPostSchema = z.object({
+  postUrl: z.string().url().describe("URL of the post to bookmark")
+});
+
+const UnbookmarkPostSchema = z.object({
+  postUrl: z.string().url().describe("URL of the post to remove bookmark from")
+});
+
+const RetweetPostSchema = z.object({
+  postUrl: z.string().url().describe("URL of the post to retweet/repost")
+});
+
+const UnretweetPostSchema = z.object({
+  postUrl: z.string().url().describe("URL of the post to unretweet")
+});
+
+const QuoteTweetSchema = z.object({
+  postUrl: z.string().url().describe("URL of the post to quote tweet"),
+  quoteText: z.string().min(1).max(280).describe("Text for the quote tweet")
+});
+
+const ReplyToPostSchema = z.object({
+  postUrl: z.string().url().describe("URL of the post to reply to"),
+  replyText: z.string().min(1).max(280).describe("Text for the reply")
+});
+
+// Comment interaction schemas
+const LikeCommentSchema = z.object({
+  postUrl: z.string().url().describe("URL of the post containing the comment"),
+  commentIndex: z.number().min(0).describe("Index of the comment to like (0-based)")
+});
+
+const UnlikeCommentSchema = z.object({
+  postUrl: z.string().url().describe("URL of the post containing the comment"),
+  commentIndex: z.number().min(0).describe("Index of the comment to unlike (0-based)")
+});
+
+const ReplyToCommentSchema = z.object({
+  postUrl: z.string().url().describe("URL of the post containing the comment"),
+  commentIndex: z.number().min(0).describe("Index of the comment to reply to (0-based)"),
+  replyText: z.string().min(1).max(280).describe("Text for the reply")
+});
+
+const LikeCommentByIdSchema = z.object({
+  commentUrl: z.string().url().describe("Direct URL to the comment")
 });
 
 export class TwitterMCPServer {
@@ -220,51 +276,6 @@ export class TwitterMCPServer {
               }
             },
             required: ['tweets']
-          }
-        } as Tool,
-        {
-          name: 'follow_from_following',
-          description: 'Follow users from your following list',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              count: {
-                type: 'number',
-                description: 'Number of users to follow',
-                minimum: 1,
-                maximum: 50,
-                default: 10
-              }
-            },
-            required: []
-          }
-        } as Tool,
-        {
-          name: 'like_from_explore',
-          description: 'Like posts from the explore section',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              query: {
-                type: 'string',
-                description: 'Search query for explore section'
-              }
-            },
-            required: []
-          }
-        } as Tool,
-        {
-          name: 'follow_from_explore',
-          description: 'Follow users from the explore section',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              query: {
-                type: 'string',
-                description: 'Search query for explore section'
-              }
-            },
-            required: []
           }
         } as Tool,
         {
@@ -405,6 +416,209 @@ export class TwitterMCPServer {
             properties: {},
             required: []
           }
+        } as Tool,
+        // Post interaction tools
+        {
+          name: 'like_post',
+          description: 'Like a specific post',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              postUrl: {
+                type: 'string',
+                description: 'URL of the post to like'
+              }
+            },
+            required: ['postUrl']
+          }
+        } as Tool,
+        {
+          name: 'unlike_post',
+          description: 'Unlike a specific post',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              postUrl: {
+                type: 'string',
+                description: 'URL of the post to unlike'
+              }
+            },
+            required: ['postUrl']
+          }
+        } as Tool,
+        {
+          name: 'bookmark_post',
+          description: 'Bookmark a specific post',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              postUrl: {
+                type: 'string',
+                description: 'URL of the post to bookmark'
+              }
+            },
+            required: ['postUrl']
+          }
+        } as Tool,
+        {
+          name: 'unbookmark_post',
+          description: 'Remove bookmark from a specific post',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              postUrl: {
+                type: 'string',
+                description: 'URL of the post to remove bookmark from'
+              }
+            },
+            required: ['postUrl']
+          }
+        } as Tool,
+        {
+          name: 'retweet_post',
+          description: 'Retweet/repost a specific post',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              postUrl: {
+                type: 'string',
+                description: 'URL of the post to retweet/repost'
+              }
+            },
+            required: ['postUrl']
+          }
+        } as Tool,
+        {
+          name: 'unretweet_post',
+          description: 'Remove retweet/repost of a specific post',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              postUrl: {
+                type: 'string',
+                description: 'URL of the post to unretweet'
+              }
+            },
+            required: ['postUrl']
+          }
+        } as Tool,
+        {
+          name: 'quote_tweet',
+          description: 'Quote tweet a post with custom text',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              postUrl: {
+                type: 'string',
+                description: 'URL of the post to quote tweet'
+              },
+              quoteText: {
+                type: 'string',
+                description: 'Text for the quote tweet',
+                minLength: 1,
+                maxLength: 280
+              }
+            },
+            required: ['postUrl', 'quoteText']
+          }
+        } as Tool,
+        {
+          name: 'reply_to_post',
+          description: 'Reply to a post with a comment',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              postUrl: {
+                type: 'string',
+                description: 'URL of the post to reply to'
+              },
+              replyText: {
+                type: 'string',
+                description: 'Text for the reply',
+                minLength: 1,
+                maxLength: 280
+              }
+            },
+            required: ['postUrl', 'replyText']
+          }
+        } as Tool,
+        // Comment interaction tools
+        {
+          name: 'like_comment',
+          description: 'Like a specific comment on a post',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              postUrl: {
+                type: 'string',
+                description: 'URL of the post containing the comment'
+              },
+              commentIndex: {
+                type: 'number',
+                description: 'Index of the comment to like (0-based)',
+                minimum: 0
+              }
+            },
+            required: ['postUrl', 'commentIndex']
+          }
+        } as Tool,
+        {
+          name: 'unlike_comment',
+          description: 'Unlike a specific comment on a post',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              postUrl: {
+                type: 'string',
+                description: 'URL of the post containing the comment'
+              },
+              commentIndex: {
+                type: 'number',
+                description: 'Index of the comment to unlike (0-based)',
+                minimum: 0
+              }
+            },
+            required: ['postUrl', 'commentIndex']
+          }
+        } as Tool,
+        {
+          name: 'reply_to_comment',
+          description: 'Reply to a specific comment',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              postUrl: {
+                type: 'string',
+                description: 'URL of the post containing the comment'
+              },
+              commentIndex: {
+                type: 'number',
+                description: 'Index of the comment to reply to (0-based)',
+                minimum: 0
+              },
+              replyText: {
+                type: 'string',
+                description: 'Text for the reply',
+                minLength: 1,
+                maxLength: 280
+              }
+            },
+            required: ['postUrl', 'commentIndex', 'replyText']
+          }
+        } as Tool,
+        {
+          name: 'like_comment_by_id',
+          description: 'Like a comment by its direct URL',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              commentUrl: {
+                type: 'string',
+                description: 'Direct URL to the comment'
+              }
+            },
+            required: ['commentUrl']
+          }
         } as Tool
       ]
     }));
@@ -422,12 +636,6 @@ export class TwitterMCPServer {
             return await this.handleTweet(args);
           case 'thread':
             return await this.handleThread(args);
-          case 'follow_from_following':
-            return await this.handleFollowFromFollowing(args);
-          case 'like_from_explore':
-            return await this.handleLikeFromExplore(args);
-          case 'follow_from_explore':
-            return await this.handleFollowFromExplore(args);
           case 'scrape_posts':
             return await this.handleScrapePosts(args);
           case 'scrape_profile':
@@ -442,6 +650,32 @@ export class TwitterMCPServer {
             return await this.handleScrapeTimeline(args);
           case 'scrape_trending':
             return await this.handleScrapeTrending();
+          // Post interaction tools
+          case 'like_post':
+            return await this.handleLikePost(args);
+          case 'unlike_post':
+            return await this.handleUnlikePost(args);
+          case 'bookmark_post':
+            return await this.handleBookmarkPost(args);
+          case 'unbookmark_post':
+            return await this.handleUnbookmarkPost(args);
+          case 'retweet_post':
+            return await this.handleRetweetPost(args);
+          case 'unretweet_post':
+            return await this.handleUnretweetPost(args);
+          case 'quote_tweet':
+            return await this.handleQuoteTweet(args);
+          case 'reply_to_post':
+            return await this.handleReplyToPost(args);
+          // Comment interaction tools
+          case 'like_comment':
+            return await this.handleLikeComment(args);
+          case 'unlike_comment':
+            return await this.handleUnlikeComment(args);
+          case 'reply_to_comment':
+            return await this.handleReplyToComment(args);
+          case 'like_comment_by_id':
+            return await this.handleLikeCommentById(args);
           default:
             throw new McpError(
               ErrorCode.MethodNotFound,
@@ -478,7 +712,8 @@ export class TwitterMCPServer {
       text: result.data.text,
       media: result.data.media
     };
-    await tweet(tweetData);
+    const page = await this.ensureAuthenticated();
+    await postTweet(page, tweetData);
     return {
       content: [{
         type: 'text',
@@ -515,7 +750,8 @@ export class TwitterMCPServer {
     }
 
     // Pass the tweets array to the thread function
-    await thread(tweetsToPost);
+    const page = await this.ensureAuthenticated();
+    await postThread(page, tweetsToPost);
     
     // Count tweets and media
     let mediaCount = 0;
@@ -529,60 +765,6 @@ export class TwitterMCPServer {
       content: [{
         type: 'text',
         text: `Thread posted successfully with ${tweetsToPost.length} tweets${mediaCount > 0 ? ` and ${mediaCount} media file(s)` : ''}`
-      }] as TextContent[]
-    };
-  }
-
-  private async handleFollowFromFollowing(args: unknown) {
-    const result = FollowFromFollowingSchema.safeParse(args);
-    if (!result.success) {
-      throw new McpError(
-        ErrorCode.InvalidParams,
-        `Invalid parameters: ${result.error.message}`
-      );
-    }
-
-    await followFromFollowing();
-    return {
-      content: [{
-        type: 'text',
-        text: `Started following users from your following list`
-      }] as TextContent[]
-    };
-  }
-
-  private async handleLikeFromExplore(args: unknown) {
-    const result = LikeFromExploreSchema.safeParse(args);
-    if (!result.success) {
-      throw new McpError(
-        ErrorCode.InvalidParams,
-        `Invalid parameters: ${result.error.message}`
-      );
-    }
-
-    await likeFromExplore(result.data.query || '');
-    return {
-      content: [{
-        type: 'text',
-        text: `Liked posts from explore section${result.data.query ? ` with query: ${result.data.query}` : ''}`
-      }] as TextContent[]
-    };
-  }
-
-  private async handleFollowFromExplore(args: unknown) {
-    const result = FollowFromExploreSchema.safeParse(args);
-    if (!result.success) {
-      throw new McpError(
-        ErrorCode.InvalidParams,
-        `Invalid parameters: ${result.error.message}`
-      );
-    }
-
-    await followFromExplore(result.data.query || '');
-    return {
-      content: [{
-        type: 'text',
-        text: `Followed users from explore section${result.data.query ? ` with query: ${result.data.query}` : ''}`
       }] as TextContent[]
     };
   }
@@ -824,6 +1006,248 @@ export class TwitterMCPServer {
     };
   }
 
+  // Post interaction handlers
+  private async handleLikePost(args: unknown) {
+    const result = LikePostSchema.safeParse(args);
+    if (!result.success) {
+      throw new McpError(
+        ErrorCode.InvalidParams,
+        `Invalid parameters: ${result.error.message}`
+      );
+    }
+
+    const page = await this.ensureAuthenticated();
+    const success = await likePost(page, result.data.postUrl);
+    
+    return {
+      content: [{
+        type: 'text',
+        text: success ? `Successfully liked post: ${result.data.postUrl}` : `Post was already liked: ${result.data.postUrl}`
+      }] as TextContent[]
+    };
+  }
+
+  private async handleUnlikePost(args: unknown) {
+    const result = UnlikePostSchema.safeParse(args);
+    if (!result.success) {
+      throw new McpError(
+        ErrorCode.InvalidParams,
+        `Invalid parameters: ${result.error.message}`
+      );
+    }
+
+    const page = await this.ensureAuthenticated();
+    const success = await unlikePost(page, result.data.postUrl);
+    
+    return {
+      content: [{
+        type: 'text',
+        text: success ? `Successfully unliked post: ${result.data.postUrl}` : `Post was not liked: ${result.data.postUrl}`
+      }] as TextContent[]
+    };
+  }
+
+  private async handleBookmarkPost(args: unknown) {
+    const result = BookmarkPostSchema.safeParse(args);
+    if (!result.success) {
+      throw new McpError(
+        ErrorCode.InvalidParams,
+        `Invalid parameters: ${result.error.message}`
+      );
+    }
+
+    const page = await this.ensureAuthenticated();
+    await bookmarkPost(page, result.data.postUrl);
+    
+    return {
+      content: [{
+        type: 'text',
+        text: `Successfully bookmarked post: ${result.data.postUrl}`
+      }] as TextContent[]
+    };
+  }
+
+  private async handleUnbookmarkPost(args: unknown) {
+    const result = UnbookmarkPostSchema.safeParse(args);
+    if (!result.success) {
+      throw new McpError(
+        ErrorCode.InvalidParams,
+        `Invalid parameters: ${result.error.message}`
+      );
+    }
+
+    const page = await this.ensureAuthenticated();
+    await unbookmarkPost(page, result.data.postUrl);
+    
+    return {
+      content: [{
+        type: 'text',
+        text: `Successfully removed bookmark from post: ${result.data.postUrl}`
+      }] as TextContent[]
+    };
+  }
+
+  private async handleRetweetPost(args: unknown) {
+    const result = RetweetPostSchema.safeParse(args);
+    if (!result.success) {
+      throw new McpError(
+        ErrorCode.InvalidParams,
+        `Invalid parameters: ${result.error.message}`
+      );
+    }
+
+    const page = await this.ensureAuthenticated();
+    await retweetPost(page, result.data.postUrl);
+    
+    return {
+      content: [{
+        type: 'text',
+        text: `Successfully retweeted post: ${result.data.postUrl}`
+      }] as TextContent[]
+    };
+  }
+
+  private async handleUnretweetPost(args: unknown) {
+    const result = UnretweetPostSchema.safeParse(args);
+    if (!result.success) {
+      throw new McpError(
+        ErrorCode.InvalidParams,
+        `Invalid parameters: ${result.error.message}`
+      );
+    }
+
+    const page = await this.ensureAuthenticated();
+    await unretweetPost(page, result.data.postUrl);
+    
+    return {
+      content: [{
+        type: 'text',
+        text: `Successfully unretweeted post: ${result.data.postUrl}`
+      }] as TextContent[]
+    };
+  }
+
+  private async handleQuoteTweet(args: unknown) {
+    const result = QuoteTweetSchema.safeParse(args);
+    if (!result.success) {
+      throw new McpError(
+        ErrorCode.InvalidParams,
+        `Invalid parameters: ${result.error.message}`
+      );
+    }
+
+    const page = await this.ensureAuthenticated();
+    await quoteTweet(page, result.data.postUrl, result.data.quoteText);
+    
+    return {
+      content: [{
+        type: 'text',
+        text: `Successfully quote tweeted: "${result.data.quoteText}" on post ${result.data.postUrl}`
+      }] as TextContent[]
+    };
+  }
+
+  private async handleReplyToPost(args: unknown) {
+    const result = ReplyToPostSchema.safeParse(args);
+    if (!result.success) {
+      throw new McpError(
+        ErrorCode.InvalidParams,
+        `Invalid parameters: ${result.error.message}`
+      );
+    }
+
+    const page = await this.ensureAuthenticated();
+    await replyToPost(page, result.data.postUrl, result.data.replyText);
+    
+    return {
+      content: [{
+        type: 'text',
+        text: `Successfully replied to post ${result.data.postUrl} with: "${result.data.replyText}"`
+      }] as TextContent[]
+    };
+  }
+
+  // Comment interaction handlers
+  private async handleLikeComment(args: unknown) {
+    const result = LikeCommentSchema.safeParse(args);
+    if (!result.success) {
+      throw new McpError(
+        ErrorCode.InvalidParams,
+        `Invalid parameters: ${result.error.message}`
+      );
+    }
+
+    const page = await this.ensureAuthenticated();
+    await likeComment(page, result.data.postUrl, result.data.commentIndex);
+    
+    return {
+      content: [{
+        type: 'text',
+        text: `Successfully liked comment #${result.data.commentIndex} on post: ${result.data.postUrl}`
+      }] as TextContent[]
+    };
+  }
+
+  private async handleUnlikeComment(args: unknown) {
+    const result = UnlikeCommentSchema.safeParse(args);
+    if (!result.success) {
+      throw new McpError(
+        ErrorCode.InvalidParams,
+        `Invalid parameters: ${result.error.message}`
+      );
+    }
+
+    const page = await this.ensureAuthenticated();
+    await unlikeComment(page, result.data.postUrl, result.data.commentIndex);
+    
+    return {
+      content: [{
+        type: 'text',
+        text: `Successfully unliked comment #${result.data.commentIndex} on post: ${result.data.postUrl}`
+      }] as TextContent[]
+    };
+  }
+
+  private async handleReplyToComment(args: unknown) {
+    const result = ReplyToCommentSchema.safeParse(args);
+    if (!result.success) {
+      throw new McpError(
+        ErrorCode.InvalidParams,
+        `Invalid parameters: ${result.error.message}`
+      );
+    }
+
+    const page = await this.ensureAuthenticated();
+    await replyToComment(page, result.data.postUrl, result.data.commentIndex, result.data.replyText);
+    
+    return {
+      content: [{
+        type: 'text',
+        text: `Successfully replied to comment #${result.data.commentIndex} on post ${result.data.postUrl} with: "${result.data.replyText}"`
+      }] as TextContent[]
+    };
+  }
+
+  private async handleLikeCommentById(args: unknown) {
+    const result = LikeCommentByIdSchema.safeParse(args);
+    if (!result.success) {
+      throw new McpError(
+        ErrorCode.InvalidParams,
+        `Invalid parameters: ${result.error.message}`
+      );
+    }
+
+    const page = await this.ensureAuthenticated();
+    await likeCommentById(page, result.data.commentUrl);
+    
+    return {
+      content: [{
+        type: 'text',
+        text: `Successfully liked comment: ${result.data.commentUrl}`
+      }] as TextContent[]
+    };
+  }
+
   async start(): Promise<void> {
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
@@ -838,4 +1262,4 @@ if (require.main === module) {
     console.error('Failed to start server:', error);
     process.exit(1);
   });
-} 
+}
