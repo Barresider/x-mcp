@@ -1,20 +1,54 @@
 {
-  "name": "x-twitter-mcp",
+  "name": "x-mcp",
   "version": "1.0.0",
-  "main": "index.js",
+  "description": "A Model Context Protocol (MCP) server that provides unofficial X/Twitter API access through browser automation using Playwright",
+  "main": "dist/mcp.js",
+  "bin": {
+    "x-mcp": "./dist/mcp.js"
+  },
   "scripts": {
     "build": "tsc",
     "mcp": "ts-node -T ./src/mcp.ts",
-    "cli": "ts-node -T ./src/cli.ts"
+    "cli": "ts-node -T ./src/cli.ts",
+    "prepublishOnly": "npm run build",
+    "prepack": "npm run build",
+    "release": "release-it"
   },
-  "keywords": [],
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "twitter",
+    "x",
+    "playwright",
+    "automation",
+    "social-media",
+    "ai-tools"
+  ],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Barresider/x-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Barresider/x-mcp/issues"
+  },
+  "homepage": "https://github.com/Barresider/x-mcp#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "devDependencies": {
     "@playwright/test": "^1.44.0",
+    "@release-it/conventional-changelog": "^8.0.1",
     "@tsconfig/recommended": "^1.0.6",
     "@types/commander": "^2.12.0",
     "@types/node": "^20.12.12",
+    "release-it": "^17.6.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.4.5"
   },

@@ -29,14 +29,56 @@ A Model Context Protocol (MCP) server that provides unofficial X/Twitter API acc
 - Valid X/Twitter account credentials
 - Docker (optional, for containerized deployment)
 
+## Quick Start
+
+1. Add this configuration to your Claude Desktop config file:
+
+**Windows**: `%APPDATA%\Claude\claude_desktop_config.json`  
+**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "x-twitter-mcp": {
+      "command": "npx",
+      "args": ["-y", "x-mcp"],
+      "env": {
+        "TWITTER_USERNAME": "your_twitter_username",
+        "TWITTER_PASSWORD": "your_twitter_password"
+      }
+    }
+  }
+}
+```
+
+2. Restart Claude Desktop
+
+That's it! Claude can now interact with X/Twitter through 25+ powerful tools including:
+
+- `tweet`: Post a new tweet with optional media
+- `thread`: Post a multi-tweet thread
+- `search_twitter`: Search for tweets with advanced filters
+- `scrape_profile`: Get comprehensive user profile data
+- `scrape_timeline`: Extract posts from timelines
+- `like_post`, `retweet_post`, `bookmark_post`: Interact with posts
+- And many more for comprehensive X/Twitter automation
+
+## Example Usage
+
+Try asking Claude:
+- "Can you post a tweet saying 'Hello from Claude!'"
+- "Can you search for tweets about Claude AI?"
+- "Can you scrape Elon Musk's profile and show me his latest 5 tweets?"
+- "Can you post a thread about the benefits of AI?"
+
 ## 🛠️ Installation
 
-### Local Installation
+### Local Development Installation
 
 1. Clone the repository:
 ```bash
 git clone <repository-url>
-cd x-twitter-playwright
+cd x-mcp
 ```
 
 2. Install dependencies:
@@ -89,83 +131,6 @@ mkdir -p playwright/.auth
 npm run cli login
 # or
 node dist/cli.js login
-```
-
-## 🚀 Usage
-
-### As MCP Server (Recommended)
-
-#### Stdio Transport (Default)
-```bash
-npm run mcp
-# or
-node dist/mcp.js
-```
-
-#### HTTP/SSE Transport
-```bash
-MCP_TRANSPORT=sse npm run mcp
-# or
-MCP_TRANSPORT=sse node dist/mcp.js
-```
-
-The server will start on the configured port (default: 3000) with endpoints:
-- `GET /sse` - SSE connection endpoint
-- `POST /messages` - Message handling endpoint
-
-### Command Line Interface
-
-The CLI provides direct access to all functionality:
-
-#### Content Creation
-```bash
-# Post a tweet
-npm run cli tweet --text "Hello World!" --media path/to/image.jpg
-
-# Post a thread
-npm run cli thread --tweets "First tweet" "Second tweet" "Third tweet"
-
-# Reply to a post
-npm run cli reply-to-post <postUrl> --text "Great post!"
-
-# Quote tweet
-npm run cli quote-tweet <postUrl> --text "Adding my thoughts..."
-```
-
-#### Content Interaction
-```bash
-# Like/unlike posts
-npm run cli like-post <postUrl>
-npm run cli unlike-post <postUrl>
-
-# Retweet/unretweet
-npm run cli retweet-post <postUrl>
-npm run cli unretweet-post <postUrl>
-
-# Bookmark management
-npm run cli bookmark-post <postUrl>
-npm run cli unbookmark-post <postUrl>
-```
-
-#### Content Scraping
-```bash
-# Scrape user profile
-npm run cli scrape-profile elonmusk --max 10
-
-# Search for content
-npm run cli search "artificial intelligence" --max 20
-
-# Search for viral content
-npm run cli search-viral "machine learning" --min-likes 1000 --max 10
-
-# Scrape timeline
-npm run cli scrape-timeline --type for-you --max 15
-
-# Get trending topics
-npm run cli scrape-trending
-
-# Scrape post comments
-npm run cli scrape-comments <postUrl> --max 50
 ```
 
 ## 🔧 Available MCP Tools

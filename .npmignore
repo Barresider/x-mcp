@@ -1,0 +1,53 @@
+# Source files
+src/
+tsconfig.json
+playwright.config.ts
+
+# Development files
+.env
+.env.*
+docker-compose.yml
+Dockerfile
+.dockerignore
+
+# Build artifacts
+node_modules/
+*.log
+*.tgz
+
+# Development directories
+test/
+tests/
+playwright/
+coverage/
+
+# Version control
+.git/
+.github/
+.gitignore
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test files
+*.test.js
+*.test.ts
+*.spec.js
+*.spec.ts
+
+# Documentation build
+docs/
+
+# Release configuration
+.release-it.json
+
+# Temporary files
+tmp/
+temp/ 
