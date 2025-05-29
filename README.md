@@ -41,7 +41,7 @@ A Model Context Protocol (MCP) server that provides unofficial X/Twitter API acc
   "mcpServers": {
     "x-mcp": {
       "command": "npx",
-      "args": ["-y", "x-mcp"],
+      "args": ["-y", "@barresider/x-mcp"],
       "env": {
         "TWITTER_USERNAME": "your_twitter_username",
         "TWITTER_PASSWORD": "your_twitter_password"
