@@ -7,22 +7,200 @@ import { chromium, devices, Page } from "playwright";
 async function doLogin(page: Page, user: string, password: string) {
   await page.goto("https://twitter.com/i/flow/login");
 
-  // type username
-  const userInput = '//input[@autocomplete="username"]';
-  await page.fill(userInput, user);
+  // Wait for the page to load
+  await page.waitForLoadState('networkidle');
 
-  // click next
-  await page.click("//span[contains(text(), 'Next')]");
+  // Username input with retry logic
+  const usernameSelectors = [
+    '//input[@autocomplete="username"]',
+    'input[autocomplete="username"]',
+    'input[name="text"]',
+    'input[type="text"]'
+  ];
 
-  // type password
-  const passwordInput = '//input[@autocomplete="current-password"]';
-  await page.fill(passwordInput, password);
+  let userInputFilled = false;
+  for (const selector of usernameSelectors) {
+    try {
+      await page.waitForSelector(selector, { timeout: 10000 });
+      await page.fill(selector, user);
+      userInputFilled = true;
+      console.log(`Username filled using selector: ${selector}`);
+      break;
+    } catch (error) {
+      console.log(`Failed to fill username with selector ${selector}`);
+    }
+  }
 
-  // click login
-  await page.click("//span[contains(text(), 'Log in')]");
+  if (!userInputFilled) {
+    throw new Error("Failed to fill username field");
+  }
 
-  // wait for login
-  await page.waitForURL("https://x.com/home");
+  // Add a small delay to mimic human behavior
+  await page.waitForTimeout(1000);
+
+  // Click next button with multiple selectors
+  const nextButtonSelectors = [
+    "//span[contains(text(), 'Next')]",
+    "button:has-text('Next')",
+    "[role='button']:has-text('Next')",
+    "div[role='button'] span:text('Next')"
+  ];
+
+  let nextClicked = false;
+  for (const selector of nextButtonSelectors) {
+    try {
+      await page.click(selector, { timeout: 5000 });
+      nextClicked = true;
+      console.log(`Next button clicked using selector: ${selector}`);
+      break;
+    } catch (error) {
+      console.log(`Failed to click next with selector ${selector}`);
+    }
+  }
+
+  if (!nextClicked) {
+    throw new Error("Failed to click Next button");
+  }
+
+  // Wait for password field or any intermediate steps
+  await page.waitForTimeout(2000);
+  
+  // Check for phone/email verification step
+  const phoneVerificationSelectors = [
+    'input[data-testid="ocfEnterTextTextInput"]',
+    'input[name="text"]'
+  ];
+  
+  let hasPhoneVerification = false;
+  for (const selector of phoneVerificationSelectors) {
+    try {
+      const phoneField = await page.$(selector);
+      if (phoneField) {
+        const isVisible = await phoneField.isVisible();
+        if (isVisible) {
+          hasPhoneVerification = true;
+          console.log("Phone/email verification step detected");
+          
+          // Fill phone/email if available in env
+          const phoneOrEmail = process.env.TWITTER_PHONE || process.env.TWITTER_EMAIL || user;
+          await page.fill(selector, phoneOrEmail);
+          await page.waitForTimeout(1000);
+          
+          // Click next again
+          for (const nextSelector of nextButtonSelectors) {
+            try {
+              await page.click(nextSelector, { timeout: 5000 });
+              break;
+            } catch (error) {
+              // Continue trying other selectors
+            }
+          }
+          break;
+        }
+      }
+    } catch (error) {
+      // Continue checking other selectors
+    }
+  }
+
+  // Wait for password field with multiple strategies
+  const passwordSelectors = [
+    '//input[@autocomplete="current-password"]',
+    'input[autocomplete="current-password"]',
+    'input[type="password"]',
+    'input[name="password"]',
+    '[data-testid="LoginForm_password_field"]'
+  ];
+
+  // Wait a bit more to ensure password field is ready
+  await page.waitForTimeout(2000);
+
+  let passwordFilled = false;
+  for (const selector of passwordSelectors) {
+    try {
+      // Wait for the selector to be visible and stable
+      await page.waitForSelector(selector, { 
+        timeout: 10000,
+        state: 'visible'
+      });
+      
+      // Clear field first in case there's any pre-filled content
+      await page.click(selector);
+      await page.keyboard.press('Control+A');
+      await page.keyboard.press('Delete');
+      
+      // Type password slowly to mimic human behavior
+      await page.type(selector, password, { delay: 100 });
+      
+      passwordFilled = true;
+      console.log(`Password filled using selector: ${selector}`);
+      break;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.log(`Failed to fill password with selector ${selector}: ${errorMessage}`);
+    }
+  }
+
+  if (!passwordFilled) {
+    // Last resort: try to find any visible password field
+    try {
+      const passwordFields = await page.$$('input[type="password"]');
+      for (const field of passwordFields) {
+        if (await field.isVisible()) {
+          await field.click();
+          await field.fill(password);
+          passwordFilled = true;
+          console.log("Password filled using visible password field search");
+          break;
+        }
+      }
+    } catch (error) {
+      console.log("Failed to fill password using fallback method");
+    }
+  }
+
+  if (!passwordFilled) {
+    throw new Error("Failed to fill password field");
+  }
+
+  // Add delay before clicking login
+  await page.waitForTimeout(1000);
+
+  // Click login button with multiple selectors
+  const loginButtonSelectors = [
+    "//span[contains(text(), 'Log in')]",
+    "button:has-text('Log in')",
+    "[role='button']:has-text('Log in')",
+    "[data-testid='LoginForm_Login_Button']",
+    "div[role='button'] span:text('Log in')"
+  ];
+
+  let loginClicked = false;
+  for (const selector of loginButtonSelectors) {
+    try {
+      await page.click(selector, { timeout: 5000 });
+      loginClicked = true;
+      console.log(`Login button clicked using selector: ${selector}`);
+      break;
+    } catch (error) {
+      console.log(`Failed to click login with selector ${selector}`);
+    }
+  }
+
+  if (!loginClicked) {
+    throw new Error("Failed to click Log in button");
+  }
+
+  // wait for login with longer timeout
+  try {
+    await page.waitForURL("https://x.com/home", { timeout: 30000 });
+  } catch (error) {
+    // Check if we're on the home page with a different URL pattern
+    const currentUrl = page.url();
+    if (!currentUrl.includes('/home') && !currentUrl.includes('x.com')) {
+      throw new Error(`Login failed. Current URL: ${currentUrl}`);
+    }
+  }
 }
 
 const authFile = "playwright/.auth/twitter.json";
