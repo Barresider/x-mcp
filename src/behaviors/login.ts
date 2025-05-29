@@ -19,24 +19,38 @@ async function doLogin(page: Page, user: string, password: string) {
 
   await page.waitForTimeout(2000);
 
-  const isVerificationRequired =
-    (await page
-      .locator('//input[@data-testid="ocfEnterTextTextInput"]')
-      .isVisible()
-      .catch(() => false)) ||
-    (await page
-      .locator('//span[contains(text(), "Enter your phone number or email address")]')
-      .isVisible()
-      .catch(() => false)) ||
-    (await page
-      .locator('//span[contains(text(), "Confirm your identity")]')
-      .isVisible()
-      .catch(() => false));
+  // Check for email/phone verification step
+  const phoneOrEmailPromptSelector = '//span[contains(text(), "Enter your phone number or email address")]';
+  const verificationInputSelector = '//input[@data-testid="ocfEnterTextTextInput"]';
 
-  if (isVerificationRequired) {
-    throw new Error(
-      "Email or phone verification required. Twitter has detected unusual activity and requires additional verification. Please login manually or try again later."
-    );
+  const isPhoneOrEmailPromptVisible = await page
+    .locator(phoneOrEmailPromptSelector)
+    .isVisible()
+    .catch(() => false);
+  const isVerificationInputVisible = await page
+    .locator(verificationInputSelector)
+    .isVisible()
+    .catch(() => false);
+
+  if (isPhoneOrEmailPromptVisible || isVerificationInputVisible) {
+    const twitterEmail = process.env.TWITTER_EMAIL;
+    const twitterPhone = process.env.TWITTER_PHONE;
+
+    if (twitterEmail) {
+      console.log("Email/phone verification prompted. Attempting with TWITTER_EMAIL.");
+      await page.fill(verificationInputSelector, twitterEmail);
+      await page.click("//span[contains(text(), 'Next')]");
+      await page.waitForTimeout(2000); // Wait for password page or further verification
+    } else if (twitterPhone) {
+      console.log("Email/phone verification prompted. Attempting with TWITTER_PHONE.");
+      await page.fill(verificationInputSelector, twitterPhone);
+      await page.click("//span[contains(text(), 'Next')]");
+      await page.waitForTimeout(2000); // Wait for password page or further verification
+    } else {
+      throw new Error(
+        "Email or phone verification required by Twitter, but neither TWITTER_EMAIL nor TWITTER_PHONE environment variables are set."
+      );
+    }
   }
 
   const passwordInput = '//input[@autocomplete="current-password"]';
@@ -46,9 +60,29 @@ async function doLogin(page: Page, user: string, password: string) {
     .catch(() => false);
 
   if (!passwordFieldExists) {
-    throw new Error(
-      "Password field not found. The login flow may have changed or additional verification may be required."
-    );
+    // If password field is not found, check for common reasons
+    const stillOnEmailPhoneVerification = await page
+      .locator(verificationInputSelector) // Check if still on the same verification input
+      .isVisible()
+      .catch(() => false);
+    const confirmIdentityPromptVisible = await page
+      .locator('//span[contains(text(), "Confirm your identity")]')
+      .isVisible()
+      .catch(() => false);
+
+    if (stillOnEmailPhoneVerification) {
+      throw new Error(
+        "Failed to proceed past email/phone verification. The provided TWITTER_EMAIL/TWITTER_PHONE might be incorrect, or further verification is needed."
+      );
+    } else if (confirmIdentityPromptVisible) {
+      throw new Error(
+        "Twitter requires additional identity confirmation that cannot be automated (e.g., 'Confirm your identity' prompt). Please login manually."
+      );
+    } else {
+      throw new Error(
+        "Password field not found, and no recognized verification step is active. The login flow may have changed or an unexpected verification is required."
+      );
+    }
   }
 
   await page.fill(passwordInput, password);
