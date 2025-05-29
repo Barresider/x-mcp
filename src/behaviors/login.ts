@@ -12,22 +12,90 @@ chromium.use(StealthPlugin());
 async function doLogin(page: Page, user: string, password: string) {
   await page.goto("https://twitter.com/i/flow/login");
 
-  // type username
   const userInput = '//input[@autocomplete="username"]';
   await page.fill(userInput, user);
 
-  // click next
   await page.click("//span[contains(text(), 'Next')]");
 
-  // type password
+  await page.waitForTimeout(2000);
+
+  const isVerificationRequired =
+    (await page
+      .locator('//input[@data-testid="ocfEnterTextTextInput"]')
+      .isVisible()
+      .catch(() => false)) ||
+    (await page
+      .locator('//span[contains(text(), "Enter your phone number or email address")]')
+      .isVisible()
+      .catch(() => false)) ||
+    (await page
+      .locator('//span[contains(text(), "Confirm your identity")]')
+      .isVisible()
+      .catch(() => false));
+
+  if (isVerificationRequired) {
+    throw new Error(
+      "Email or phone verification required. Twitter has detected unusual activity and requires additional verification. Please login manually or try again later."
+    );
+  }
+
   const passwordInput = '//input[@autocomplete="current-password"]';
+  const passwordFieldExists = await page
+    .locator(passwordInput)
+    .isVisible()
+    .catch(() => false);
+
+  if (!passwordFieldExists) {
+    throw new Error(
+      "Password field not found. The login flow may have changed or additional verification may be required."
+    );
+  }
+
   await page.fill(passwordInput, password);
 
-  // click login
   await page.click("//span[contains(text(), 'Log in')]");
 
-  // wait for login
-  await page.waitForURL("https://x.com/home");
+  try {
+    await Promise.race([
+      page.waitForURL("https://x.com/home", { timeout: 10000 }),
+      page.waitForSelector('//span[contains(text(), "Wrong password")]', { timeout: 5000 }),
+      page.waitForSelector('//span[contains(text(), "Incorrect")]', { timeout: 5000 }),
+      page.waitForSelector('//div[@role="alert"]', { timeout: 5000 }),
+    ]);
+  } catch (error) {
+    // Check if we're still on login page (indicates error)
+    if (page.url().includes("/i/flow/login") || page.url().includes("twitter.com/login")) {
+      const wrongPasswordError = await page
+        .locator('//span[contains(text(), "Wrong password")]')
+        .isVisible()
+        .catch(() => false);
+      const incorrectError = await page
+        .locator('//span[contains(text(), "Incorrect")]')
+        .isVisible()
+        .catch(() => false);
+      const alertError = await page
+        .locator('//div[@role="alert"]')
+        .isVisible()
+        .catch(() => false);
+
+      if (wrongPasswordError || incorrectError) {
+        throw new Error("Wrong password. Please check your credentials and try again.");
+      } else if (alertError) {
+        const alertText = await page
+          .locator('//div[@role="alert"]')
+          .textContent()
+          .catch(() => "");
+        throw new Error(`Login failed: ${alertText || "Unknown error occurred"}`);
+      } else {
+        throw new Error("Login failed. Unable to navigate to home page after login attempt.");
+      }
+    }
+  }
+
+  // Final check to ensure we're logged in
+  if (!page.url().includes("x.com/home")) {
+    throw new Error("Login failed. Did not reach the home page after login.");
+  }
 }
 
 const authFile = "playwright/.auth/twitter.json";
