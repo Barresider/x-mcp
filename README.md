@@ -39,7 +39,7 @@ A Model Context Protocol (MCP) server that provides unofficial X/Twitter API acc
 ```json
 {
   "mcpServers": {
-    "x-twitter-mcp": {
+    "x-mcp": {
       "command": "npx",
       "args": ["-y", "x-mcp"],
       "env": {
@@ -95,7 +95,7 @@ npm run build
 
 1. Build the Docker image:
 ```bash
-docker build -t x-twitter-mcp .
+docker build -t x-mcp .
 ```
 
 2. Or use Docker Compose:
@@ -244,13 +244,13 @@ TWITTER_USERNAME=your_username TWITTER_PASSWORD=your_password docker-compose --p
 ### Custom Docker Run
 ```bash
 docker run -d \
-  --name x-twitter-mcp \
+  --name x-mcp \
   -e TWITTER_USERNAME=your_username \
   -e TWITTER_PASSWORD=your_password \
   -e MCP_TRANSPORT=sse \
   -e MCP_PORT=3000 \
   -p 3000:3000 \
-  x-twitter-mcp
+  x-mcp
 ```
 
 ## 🛠️ Development
