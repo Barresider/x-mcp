@@ -48,8 +48,6 @@ import {
 } from "./behaviors/interact-with-comment";
 
 // Validation schemas using Zod
-const LoginSchema = z.object({});
-
 const TweetSchema = z.object({
   text: z.string().min(1).max(280).describe("The text content of the tweet"),
   media: z.array(z.string()).optional().describe("Array of media file paths (images/videos) to attach to the tweet")

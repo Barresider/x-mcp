@@ -5,7 +5,6 @@ import {
   scrollAndWait, 
   parseCount,
   extractUserFromElement,
-  parseTwitterDate,
   dismissPopups,
   extractMediaFromElement,
   isAdElement
@@ -78,7 +77,7 @@ export async function scrapeComments(
 /**
  * Extract comment data from element
  */
-async function extractCommentFromElement(element: any, page: Page): Promise<TwitterComment | null> {
+async function extractCommentFromElement(element: any, _page: Page): Promise<TwitterComment | null> {
   try {
     // Extract comment URL and ID
     const commentLink = await element.$('a[href*="/status/"]');

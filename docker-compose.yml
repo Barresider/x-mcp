@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: playwright-mcp
+    environment:
+      - TWITTER_USERNAME=${TWITTER_USERNAME}
+      - TWITTER_PASSWORD=${TWITTER_PASSWORD}
+    command: ["node", "dist/mcp.js"]
+    profiles:
+      - mcp
+    stdin_open: true
+    tty: true 

@@ -4,6 +4,7 @@
   "description": "Some utils to login and post to social media using Playwright.",
   "main": "index.js",
   "scripts": {
+    "build": "tsc",
     "mcp": "ts-node -T ./src/mcp.ts",
     "cli": "ts-node -T ./src/cli.ts"
   },
@@ -22,6 +23,7 @@
     "@modelcontextprotocol/sdk": "^1.12.0",
     "commander": "^12.1.0",
     "dotenv": "^16.4.5",
+    "playwright": "^1.44.0",
     "zod": "^3.25.36"
   }
 }

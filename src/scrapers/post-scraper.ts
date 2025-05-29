@@ -7,7 +7,6 @@ import {
   calculateEngagementRate,
   extractUserFromElement,
   extractMediaFromElement,
-  parseTwitterDate,
   isAdElement
 } from "./utils";
 
@@ -67,7 +66,7 @@ export async function scrapePosts(
 /**
  * Extract post data from a tweet element
  */
-async function extractPostFromElement(element: any, page: Page): Promise<TwitterPost | null> {
+async function extractPostFromElement(element: any, _page: Page): Promise<TwitterPost | null> {
   try {
     // Extract post URL and ID
     const postLink = await element.$('a[href*="/status/"]');
