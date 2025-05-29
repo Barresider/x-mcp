@@ -1276,6 +1276,10 @@ export class TwitterMCPServer {
       }
     });
 
+    app.get('/ping', (_req, res) => {
+      res.send('pong');
+    });
+
     app.listen(port, () => {
       console.error(`Twitter Playwright MCP server running on HTTP port ${port}`);
       console.error(`SSE endpoint: http://localhost:${port}/sse`);
