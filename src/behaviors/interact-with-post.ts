@@ -219,27 +219,28 @@ export async function replyToPost(page: Page, postUrl: string, replyText: string
 export async function postTweet(page: Page, tweet: TweetWithMedia) {
   await goHome(page);
 
-  // click tweet
+  console.log("Clicking tweet...");
   await page.click("a[href='/compose/post']");
 
-  // Upload media if provided
   if (tweet.media && tweet.media.length > 0) {
+    console.log("Uploading media...");
     await uploadMedia(page, tweet.media);
   }
 
-  // type tweet
+  console.log("Typing tweet...");
   await page.fill(
     "//div[@data-viewportview='true']//div[@class='DraftEditor-editorContainer']/div[@role='textbox']",
     tweet.text
   );
 
-  // click post
+  console.log("Clicking post...");
   await page.click("//span[contains(text(), 'Post')]");
 
-  // wait for tweet
+  console.log("Waiting for tweet...");
   await page.waitForURL("https://x.com/home");
   await page.waitForTimeout(r(1000, 2500));
 
+  console.log("Simulating random behaviour...");
   await simulateRandomBehaviour(page);
 }
 
