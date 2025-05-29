@@ -8,6 +8,10 @@ dockerfilePath = "Dockerfile"
 # Command to start the application (can be omitted if CMD is set in Dockerfile)
 # startCommand = "node dist/mcp.js"
 
+[deploy.variables]
+MCP_TRANSPORT = "sse"
+MCP_PORT = "3000"
+
 # Healthcheck configuration
 healthcheckPath = "/ping"
 healthcheckTimeout = 60 # seconds
