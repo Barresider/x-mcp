@@ -237,7 +237,6 @@ export async function postTweet(page: Page, tweet: TweetWithMedia) {
   await page.click("//span[contains(text(), 'Post')]");
 
   console.log("Waiting for tweet...");
-  await page.waitForURL("https://x.com/home");
   await page.waitForTimeout(r(1000, 2500));
 
   console.log("Simulating random behaviour...");
