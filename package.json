@@ -1,0 +1,22 @@
+{
+  "name": "playwright-utils",
+  "version": "1.0.0",
+  "description": "Some utils to login and post to social media using Playwright.",
+  "main": "index.js",
+  "scripts": {
+    "twitter": "ts-node ./scripts/twitter/index.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.44.0",
+    "@tsconfig/recommended": "^1.0.6",
+    "@types/node": "^20.12.12",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5"
+  }
+}
