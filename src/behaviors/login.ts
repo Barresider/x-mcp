@@ -165,7 +165,7 @@ export async function getUnauthenticatedPage() {
 
   const browser = await chromium.launch({
     timeout: 60000,
-    headless: false,
+    headless: true,
     slowMo: 1000,
     args: [
       "--no-sandbox",
@@ -198,7 +198,7 @@ export async function getAuthenticatedPage() {
 
   const browser = await chromium.launch({
     timeout: 60000,
-    headless: false,
+    headless: true,
     slowMo: 1000,
     ...(proxyConfig && { proxy: proxyConfig }),
   });
