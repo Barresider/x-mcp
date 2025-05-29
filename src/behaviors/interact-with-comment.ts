@@ -2,6 +2,27 @@ import { Page } from "playwright-core";
 import { r } from "../utils";
 
 /**
+ * Utility function to find the focal comment on a comment page
+ * @param page - The authenticated page
+ * @returns Locator for the focal comment
+ */
+async function findFocalComment(page: Page) {
+  // Wait for the focal/main comment to load
+  await page.waitForTimeout(r(1000, 1500));
+  
+  // The focal comment is typically marked with specific attributes or is in a specific container
+  // Try multiple strategies to find the right comment
+  const focalComment = page.locator('article[tabindex="-1"]').or(
+    page.locator('[data-testid="tweet"][tabindex="-1"]')
+  ).or(
+    // Sometimes the focal comment is the last article in the main thread
+    page.locator('article').filter({ hasText: /^(?!.*Show this thread).*$/ }).last()
+  );
+  
+  return focalComment;
+}
+
+/**
  * Like a comment by its ID (if you have scraped comments and have their IDs)
  * @param page - The authenticated page
  * @param commentUrl - Direct URL to the comment
@@ -11,12 +32,20 @@ export async function likeCommentById(page: Page, commentUrl: string): Promise<b
     await page.goto(commentUrl);
     await page.waitForLoadState('domcontentloaded');
     
-    // The main article on a comment page is the comment itself
-    const likeButton = page.locator('[data-testid="like"]').first();
-    await likeButton.click();
-    await page.waitForTimeout(r(500, 800));
+    // Find the focal comment
+    const focalComment = await findFocalComment(page);
     
-    return true;
+    // Find the like button within the focal comment
+    const likeButton = focalComment.locator('[data-testid="like"]').first();
+    
+    if (await likeButton.isVisible()) {
+      await likeButton.click();
+      await page.waitForTimeout(r(500, 800));
+      return true;
+    } else {
+      throw new Error("Like button not found in the focal comment");
+    }
+    
   } catch (error) {
     console.error("Error liking comment by ID:", error);
     throw error;
@@ -33,12 +62,20 @@ export async function unlikeCommentById(page: Page, commentUrl: string): Promise
     await page.goto(commentUrl);
     await page.waitForLoadState('domcontentloaded');
     
-    // The main article on a comment page is the comment itself
-    const unlikeButton = page.locator('[data-testid="unlike"]').first();
-    await unlikeButton.click();
-    await page.waitForTimeout(r(500, 800));
+    // Find the focal comment
+    const focalComment = await findFocalComment(page);
     
-    return true;
+    // Find the unlike button within the focal comment
+    const unlikeButton = focalComment.locator('[data-testid="unlike"]').first();
+    
+    if (await unlikeButton.isVisible()) {
+      await unlikeButton.click();
+      await page.waitForTimeout(r(500, 800));
+      return true;
+    } else {
+      throw new Error("Unlike button not found in the focal comment");
+    }
+    
   } catch (error) {
     console.error("Error unliking comment by ID:", error);
     throw error;
@@ -56,9 +93,12 @@ export async function replaceCommentById(page: Page, commentUrl: string, newText
     await page.goto(commentUrl);
     await page.waitForLoadState('domcontentloaded');
     
-    // Look for edit button or menu options
+    // Find the focal comment
+    const focalComment = await findFocalComment(page);
+    
+    // Look for edit button or menu options within the focal comment
     // Note: Twitter/X may not support comment editing, so this might not work
-    const moreButton = page.locator('[data-testid="caret"]').first();
+    const moreButton = focalComment.locator('[data-testid="caret"]').first();
     if (await moreButton.isVisible()) {
       await moreButton.click();
       await page.waitForTimeout(r(300, 500));
@@ -111,24 +151,33 @@ export async function replyToCommentById(page: Page, commentUrl: string, replyTe
     await page.goto(commentUrl);
     await page.waitForLoadState('domcontentloaded');
     
-    // The main article on a comment page is the comment itself
-    const replyButton = page.locator('[data-testid="reply"]').first();
-    await replyButton.click();
+    // Find the focal comment
+    const focalComment = await findFocalComment(page);
     
-    // Wait for reply compose area
-    await page.waitForSelector('[data-testid="tweetTextarea_0"]');
+    // Find the reply button within the focal comment
+    const replyButton = focalComment.locator('[data-testid="reply"]').first();
     
-    // Type the reply
-    const textArea = page.locator('[data-testid="tweetTextarea_0"]');
-    await textArea.fill(replyText);
-    await page.waitForTimeout(r(300, 500));
+    if (await replyButton.isVisible()) {
+      await replyButton.click();
+      
+      // Wait for reply compose area
+      await page.waitForSelector('[data-testid="tweetTextarea_0"]');
+      
+      // Type the reply
+      const textArea = page.locator('[data-testid="tweetTextarea_0"]');
+      await textArea.fill(replyText);
+      await page.waitForTimeout(r(300, 500));
+      
+      // Click reply button
+      const tweetButton = page.locator('[data-testid="tweetButton"]');
+      await tweetButton.click();
+      await page.waitForTimeout(r(1000, 1500));
+      
+      return true;
+    } else {
+      throw new Error("Reply button not found in the focal comment");
+    }
     
-    // Click reply button
-    const tweetButton = page.locator('[data-testid="tweetButton"]');
-    await tweetButton.click();
-    await page.waitForTimeout(r(1000, 1500));
-    
-    return true;
   } catch (error) {
     console.error("Error replying to comment by ID:", error);
     throw error;
