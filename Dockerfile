@@ -36,5 +36,14 @@ COPY src/behaviors ./src/behaviors
 COPY src/scrapers ./src/scrapers
 COPY test.jpg ./
 
-# Start the CLI application by default
-CMD node dist/mcp.js
+# Debug: List the contents of the dist directory to verify build output
+RUN echo "=== Contents of /app/dist ===" && ls -la ./dist/ || echo "dist directory not found"
+
+# Debug: Check if mcp.js exists
+RUN echo "=== Checking for mcp.js ===" && ls -la ./dist/mcp.js || echo "mcp.js not found"
+
+# Expose port for Railway
+EXPOSE 3000
+
+# Start the CLI application by default with better error handling
+CMD echo "Starting application..." && node dist/mcp.js
