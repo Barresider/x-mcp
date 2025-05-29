@@ -4,6 +4,7 @@ import { likeFromExplore } from "./like-from-explore";
 import { login, getAuthenticatedPage } from "./login";
 import { thread } from "./thread";
 import { tweet } from "./tweet";
+import { TweetWithMedia } from "./types";
 import {
   scrapePosts,
   scrapeProfile,
@@ -63,7 +64,19 @@ function printComments(comments: TwitterComment[]) {
       await login();
       break;
     case "tweet":
-      await tweet(params[0]);
+      // Support: npm run twitter tweet "text" [media1] [media2] ...
+      const tweetText = params[0];
+      const tweetMedia = params.slice(1);
+      if (!tweetText) {
+        console.error("Please provide tweet text");
+        console.error("Usage: npm run twitter tweet \"Your tweet text\" [media1.jpg] [media2.png] ...");
+        break;
+      }
+      const tweetData: TweetWithMedia = {
+        text: tweetText,
+        media: tweetMedia.length > 0 ? tweetMedia : undefined
+      };
+      await tweet(tweetData);
       break;
     case "follow-from-following":
       await followFromFollowing();
@@ -423,7 +436,20 @@ Example: npm run twitter examples 1
       
     default:
       console.log("Unknown command");
-      console.log("Available commands: login, tweet, follow-from-following, thread, like-from-explore, follow-from-explore, scrape, examples");
+      console.log("Available commands:");
+      console.log("  login                                    - Login to Twitter/X");
+      console.log("  tweet <text> [media1] [media2] ...      - Post a tweet with optional media");
+      console.log("  thread                                   - Post a thread (reads from messages.jsonl)");
+      console.log("  follow-from-following                    - Follow users from your following list");
+      console.log("  like-from-explore [query]               - Like posts from explore");
+      console.log("  follow-from-explore [query]             - Follow users from explore");
+      console.log("  scrape <subcommand>                     - Scrape various data");
+      console.log("  examples <number>                       - Run example scripts");
+      console.log("\nExamples:");
+      console.log('  npm run twitter tweet "Hello Twitter!"');
+      console.log('  npm run twitter tweet "Check this out!" image.jpg video.mp4');
+      console.log('  npm run twitter thread');
+      console.log('  npm run twitter scrape profile elonmusk');
       break;
   }
 })();

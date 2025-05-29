@@ -16,11 +16,23 @@ npm run mcp
   - Must be called before using other tools
 
 ### Posting
-- **tweet** - Post a tweet
+- **tweet** - Post a tweet with optional media
   - `text` (string, required): The content of the tweet (max 280 characters)
+  - `media` (string[], optional): Array of file paths to images/videos to attach
+  - Example: `{ "text": "Hello Twitter!", "media": ["./image1.jpg", "./video1.mp4"] }`
 
-- **thread** - Post a thread of tweets
-  - `tweets` (string[], required): Array of tweet texts for the thread (min 2 tweets)
+- **thread** - Post a thread of tweets with optional media per tweet
+  - `tweets` (array, required): Can be either:
+    - Array of strings: `["First tweet", "Second tweet", "Third tweet"]`
+    - Array of objects with text and media: 
+      ```json
+      [
+        { "text": "First tweet with image", "media": ["./image1.jpg"] },
+        { "text": "Second tweet with video", "media": ["./video1.mp4"] },
+        { "text": "Third tweet without media" }
+      ]
+      ```
+  - Minimum 2 tweets required for a thread
 
 ### Engagement
 - **follow_from_following** - Follow users from your following list
@@ -69,24 +81,41 @@ When connected to an AI assistant that supports MCP:
    Use the login tool
    ```
 
-2. Post a tweet:
+2. Post a tweet with media:
    ```
-   Use the tweet tool with text "Hello Twitter from MCP!"
+   Use the tweet tool with text "Check out this amazing sunset! 🌅" and media ["./sunset.jpg"]
    ```
 
-3. Search for viral AI posts:
+3. Post a thread with mixed media:
+   ```
+   Use the thread tool with tweets [
+     { "text": "🧵 Let's talk about MCP servers!", "media": ["./mcp-diagram.png"] },
+     { "text": "They enable powerful integrations between AI and external tools" },
+     { "text": "This thread was posted automatically using Playwright 🤖", "media": ["./demo.gif"] }
+   ]
+   ```
+
+4. Search for viral AI posts:
    ```
    Use the search_viral tool with query "artificial intelligence" and minLikes 5000
    ```
 
-4. Scrape a user profile:
+5. Scrape a user profile:
    ```
    Use the scrape_profile tool with username "elonmusk" and maxPosts 10
    ```
+
+## Media Support
+
+- **Supported formats**: Images (JPG, PNG, GIF) and videos (MP4, MOV)
+- **Maximum files**: Up to 4 images or 1 video per tweet
+- **File paths**: Can be relative (from current directory) or absolute paths
+- **File size limits**: Follow Twitter's standard limits (5MB for images, 512MB for videos)
 
 ## Notes
 
 - The server maintains a single authenticated browser session
 - All scraping tools require authentication (login) first
 - The server will gracefully shut down on SIGINT (Ctrl+C)
-- Results are returned as formatted JSON for easy parsing 
+- Results are returned as formatted JSON for easy parsing
+- Media uploads are handled automatically when file paths are provided 

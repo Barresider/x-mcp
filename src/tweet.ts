@@ -4,17 +4,24 @@ import { Page } from "playwright";
 import { getAuthenticatedPage, saveState } from "./login";
 import { r } from "./utils";
 import { goHome } from "./behaviors/go-home";
+import { uploadMedia } from "./behaviors/upload-media";
+import { TweetWithMedia } from "./types";
 
-async function postTweet(page: Page, text: string) {
+async function postTweet(page: Page, tweet: TweetWithMedia) {
   await goHome(page);
 
   // click tweet
   await page.click("a[href='/compose/post']");
 
+  // Upload media if provided
+  if (tweet.media && tweet.media.length > 0) {
+    await uploadMedia(page, tweet.media);
+  }
+
   // type tweet
   await page.fill(
     "//div[@data-viewportview='true']//div[@class='DraftEditor-editorContainer']/div[@role='textbox']",
-    text
+    tweet.text
   );
 
   // click post
@@ -36,11 +43,11 @@ async function simulateRandomBehaviour(page: Page) {
   }
 }
 
-export async function tweet(text: string) {
+export async function tweet(tweet: TweetWithMedia) {
   const { page, close } = await getAuthenticatedPage();
 
   console.log("Posting tweet...");
-  await postTweet(page, text);
+  await postTweet(page, tweet);
   await saveState(page);
   await close();
 

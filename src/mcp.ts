@@ -33,16 +33,24 @@ import {
   TwitterProfile,
   TwitterComment
 } from "./scrapers";
+import { TweetWithMedia } from "./types";
 
 // Validation schemas using Zod
 const LoginSchema = z.object({});
 
 const TweetSchema = z.object({
-  text: z.string().min(1).max(280).describe("The text content of the tweet")
+  text: z.string().min(1).max(280).describe("The text content of the tweet"),
+  media: z.array(z.string()).optional().describe("Array of media file paths (images/videos) to attach to the tweet")
 });
 
 const ThreadSchema = z.object({
-  tweets: z.array(z.string()).min(2).describe("Array of tweet texts for the thread")
+  tweets: z.union([
+    z.array(z.string()).min(2).describe("Array of tweet texts for the thread"),
+    z.array(z.object({
+      text: z.string().describe("Tweet text"),
+      media: z.array(z.string()).optional().describe("Media files for this tweet")
+    })).min(2).describe("Array of tweet objects with text and optional media")
+  ])
 });
 
 const FollowFromFollowingSchema = z.object({
@@ -158,6 +166,13 @@ export class TwitterMCPServer {
                 description: 'The text content of the tweet',
                 maxLength: 280,
                 minLength: 1
+              },
+              media: {
+                type: 'array',
+                description: 'Array of media file paths (images/videos) to attach to the tweet',
+                items: {
+                  type: 'string'
+                }
               }
             },
             required: ['text']
@@ -170,12 +185,38 @@ export class TwitterMCPServer {
             type: 'object',
             properties: {
               tweets: {
-                type: 'array',
-                description: 'Array of tweet texts for the thread',
-                items: {
-                  type: 'string'
-                },
-                minItems: 2
+                oneOf: [
+                  {
+                    type: 'array',
+                    description: 'Array of tweet texts for the thread',
+                    items: {
+                      type: 'string'
+                    },
+                    minItems: 2
+                  },
+                  {
+                    type: 'array',
+                    description: 'Array of tweet objects with text and optional media',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        text: {
+                          type: 'string',
+                          description: 'Tweet text'
+                        },
+                        media: {
+                          type: 'array',
+                          description: 'Media files for this tweet',
+                          items: {
+                            type: 'string'
+                          }
+                        }
+                      },
+                      required: ['text']
+                    },
+                    minItems: 2
+                  }
+                ]
               }
             },
             required: ['tweets']
@@ -433,11 +474,15 @@ export class TwitterMCPServer {
       );
     }
 
-    await tweet(result.data.text);
+    const tweetData: TweetWithMedia = {
+      text: result.data.text,
+      media: result.data.media
+    };
+    await tweet(tweetData);
     return {
       content: [{
         type: 'text',
-        text: `Tweet posted successfully: "${result.data.text}"`
+        text: `Tweet posted successfully: "${result.data.text}"${result.data.media ? ` with ${result.data.media.length} media file(s)` : ''}`
       }] as TextContent[]
     };
   }
@@ -451,13 +496,39 @@ export class TwitterMCPServer {
       );
     }
 
-    // Note: The current thread function doesn't accept parameters
-    // You might need to modify the thread function to accept an array of tweets
-    await thread();
+    // Convert to TweetWithMedia array if needed
+    let tweetsToPost: TweetWithMedia[];
+    
+    if (Array.isArray(result.data.tweets)) {
+      if (result.data.tweets.length > 0 && typeof result.data.tweets[0] === 'string') {
+        // Convert string array to TweetWithMedia array
+        tweetsToPost = (result.data.tweets as string[]).map(text => ({ text }));
+      } else {
+        // Already TweetWithMedia array
+        tweetsToPost = result.data.tweets as TweetWithMedia[];
+      }
+    } else {
+      throw new McpError(
+        ErrorCode.InvalidParams,
+        'Invalid tweets format'
+      );
+    }
+
+    // Pass the tweets array to the thread function
+    await thread(tweetsToPost);
+    
+    // Count tweets and media
+    let mediaCount = 0;
+    tweetsToPost.forEach(tweet => {
+      if (tweet.media && Array.isArray(tweet.media)) {
+        mediaCount += tweet.media.length;
+      }
+    });
+    
     return {
       content: [{
         type: 'text',
-        text: 'Thread posted successfully'
+        text: `Thread posted successfully with ${tweetsToPost.length} tweets${mediaCount > 0 ? ` and ${mediaCount} media file(s)` : ''}`
       }] as TextContent[]
     };
   }

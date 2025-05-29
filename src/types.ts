@@ -85,4 +85,12 @@ export interface ScrapeOptions {
   maxPosts?: number;
   scrollTimeout?: number;
   waitBetweenScrolls?: number;
+}
+
+/**
+ * Type for posting tweets with optional media attachments
+ */
+export interface TweetWithMedia {
+  text: string;
+  media?: string[];
 } 
