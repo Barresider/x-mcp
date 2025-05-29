@@ -17,7 +17,7 @@ COPY . .
 RUN npm run build
 
 # Use the official Playwright image for runtime (includes browsers)
-FROM mcr.microsoft.com/playwright:v1.44.0-focal
+FROM mcr.microsoft.com/playwright:v1.44.0-focal AS runner
 
 # Set the working directory in the runtime image
 WORKDIR /app
@@ -37,4 +37,4 @@ COPY src/scrapers ./src/scrapers
 COPY test.jpg ./
 
 # Start the CLI application by default
-CMD ["node", "dist/mcp.js"] 
+CMD node dist/mcp.js

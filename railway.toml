@@ -10,7 +10,7 @@ dockerfilePath = "Dockerfile"
 
 # Healthcheck configuration
 healthcheckPath = "/ping"
-healthcheckTimeout = 100 # seconds
+healthcheckTimeout = 60 # seconds
 # Optional: Add healthcheckInterval and healthcheckRetries if needed
 
 # Restart policy
