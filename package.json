@@ -1,6 +1,6 @@
 {
   "name": "@barresider/x-mcp",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": false,
   "description": "A Model Context Protocol (MCP) server that provides unofficial X/Twitter API access through browser automation using Playwright",
   "main": "dist/mcp.js",

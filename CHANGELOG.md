@@ -1,3 +1,7 @@
+
+
+## 1.0.1 (2025-05-29)
+
 # Changelog
 
 All notable changes to this project will be documented in this file.
@@ -19,4 +23,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker support for containerized deployment
 - NPM package with global installation support
 - Automated releases with release-it
-- GitHub Actions for CI/CD 
+- GitHub Actions for CI/CD
