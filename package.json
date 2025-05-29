@@ -40,6 +40,9 @@
     "url": "https://github.com/Barresider/x-mcp/issues"
   },
   "homepage": "https://github.com/Barresider/x-mcp#readme",
+  "publishConfig": {
+    "access": "public"
+  },
   "engines": {
     "node": ">=18.0.0"
   },
