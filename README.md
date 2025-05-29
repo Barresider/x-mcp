@@ -19,7 +19,7 @@ A Model Context Protocol (MCP) server that provides unofficial X/Twitter API acc
 
 ### MCP Integration
 - **Dual Transport Support**: Works with both stdio and HTTP/SSE transports
-- **Tool-based Interface**: 25+ tools available for AI agents to interact with X/Twitter
+- **Tool-based Interface**: 20+ tools available for AI agents to interact with X/Twitter
 - **Structured Responses**: JSON-formatted responses with comprehensive metadata
 - **Error Handling**: Robust error handling with descriptive error messages
 
