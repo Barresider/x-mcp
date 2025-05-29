@@ -51,6 +51,23 @@ A Model Context Protocol (MCP) server that provides unofficial X/Twitter API acc
 }
 ```
 
+With proxy (optional):
+```json
+{
+  "mcpServers": {
+    "x-mcp": {
+      "command": "npx",
+      "args": ["-y", "@barresider/x-mcp"],
+      "env": {
+        "TWITTER_USERNAME": "your_twitter_username",
+        "TWITTER_PASSWORD": "your_twitter_password",
+        "PROXY_URL": "http://proxy-server:port"
+      }
+    }
+  }
+}
+```
+
 2. Restart Claude Desktop
 
 That's it! Claude can now interact with X/Twitter through 25+ powerful tools including:
@@ -113,6 +130,15 @@ Create a `.env` file in the project root:
 # Required: X/Twitter credentials
 TWITTER_USERNAME=your_username
 TWITTER_PASSWORD=your_password
+
+# Optional: Proxy configuration
+PROXY_URL=http://proxy-server:port          # Full proxy URL (supports http/https)
+# or with authentication
+PROXY_URL=http://username:password@proxy-server:port
+# or separately
+PROXY_URL=http://proxy-server:port
+PROXY_USERNAME=proxy_username               # Optional: separate username
+PROXY_PASSWORD=proxy_password               # Optional: separate password
 
 # Optional: MCP server configuration
 MCP_TRANSPORT=stdio           # Options: stdio, sse, http
@@ -230,6 +256,19 @@ interface PostMetrics {
 - Descriptive error messages for troubleshooting
 - Graceful degradation for missing elements
 
+### Proxy Configuration
+- Supports HTTP/HTTPS proxies for all browser connections
+- Configure via `PROXY_URL` environment variable
+- Supports authentication with username/password
+- Useful for:
+  - Rotating IP addresses to avoid rate limits
+  - Accessing X/Twitter from restricted networks
+  - Adding an extra layer of anonymity
+- Example formats:
+  - Basic: `http://proxy-server:port`
+  - With auth: `http://username:password@proxy-server:port`
+  - Separate auth: Use `PROXY_USERNAME` and `PROXY_PASSWORD`
+
 ## 🐳 Docker Deployment
 
 ### Using Docker Compose
@@ -247,6 +286,7 @@ docker run -d \
   --name x-mcp \
   -e TWITTER_USERNAME=your_username \
   -e TWITTER_PASSWORD=your_password \
+  -e PROXY_URL=http://proxy-server:port \
   -e MCP_TRANSPORT=sse \
   -e MCP_PORT=3000 \
   -p 3000:3000 \
