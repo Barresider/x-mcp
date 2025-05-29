@@ -9,7 +9,7 @@
  */
 import { Page, ElementHandle } from "playwright";
 import { goHome } from "./behaviors/go-home";
-import { r } from "../utils";
+import { r } from "./utils";
 import { scrollDown } from "./behaviors/scroll-down";
 import { getAuthenticatedPage, saveState } from "./login";
 import { waitSecs } from "./behaviors/wait-secs";

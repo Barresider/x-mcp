@@ -2,7 +2,7 @@
 
 import { Page } from "playwright";
 import { getAuthenticatedPage, saveState } from "./login";
-import { r } from "../utils";
+import { r } from "./utils";
 import { goHome } from "./behaviors/go-home";
 
 async function postTweet(page: Page, text: string) {

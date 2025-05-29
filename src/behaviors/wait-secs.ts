@@ -1,4 +1,4 @@
-import { r } from "../../utils";
+import { r } from "../utils";
 import { Page } from "playwright";
 
 export async function waitSecs(page: Page) {
