@@ -71,14 +71,14 @@ async function doLogin(page: Page, user: string, password: string) {
     'input[name="text"]'
   ];
   
-  let hasPhoneVerification = false;
+  // let hasPhoneVerification = false;
   for (const selector of phoneVerificationSelectors) {
     try {
       const phoneField = await page.$(selector);
       if (phoneField) {
         const isVisible = await phoneField.isVisible();
         if (isVisible) {
-          hasPhoneVerification = true;
+          // hasPhoneVerification = true;
           console.log("Phone/email verification step detected");
           
           // Fill phone/email if available in env
