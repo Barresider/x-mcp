@@ -22,6 +22,7 @@
     "skipLibCheck": true, /* Skip type checking all .d.ts files. */
     "strict": true,
     "outDir": "./dist",
+    "allowImportingTsExtensions": true
   },
   "include": [
     "scripts"
