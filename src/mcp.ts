@@ -1267,20 +1267,9 @@ export class TwitterMCPServer {
   }
 }
 
-// Start the server if run directly
 if (require.main === module) {
-  // Debug: Log environment variables to help troubleshoot Railway deployment
-  console.error('=== Environment Variables Debug ===');
-  console.error('TWITTER_USERNAME:', process.env.TWITTER_USERNAME ? '***SET***' : 'NOT SET');
-  console.error('TWITTER_PASSWORD:', process.env.TWITTER_PASSWORD ? '***SET***' : 'NOT SET');
-  console.error('MCP_TRANSPORT:', process.env.MCP_TRANSPORT || 'NOT SET');
-  console.error('MCP_PORT:', process.env.MCP_PORT || 'NOT SET');
-  console.error('NODE_ENV:', process.env.NODE_ENV || 'NOT SET');
-  console.error('=====================================');
-
   const server = new TwitterMCPServer();
   
-  // Check if we should use SSE transport instead of stdio
   const useSSE = process.env.MCP_TRANSPORT === 'sse' || process.env.MCP_TRANSPORT === 'http';
   const port = parseInt(process.env.MCP_PORT || '3000');
   
