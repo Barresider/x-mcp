@@ -21,8 +21,8 @@ async function doLogin(page: Page, user: string, password: string) {
 
   await page.waitForTimeout(2000);
 
-  // Check for email/phone verification step
-  const phoneOrEmailPromptSelector = '//span[contains(text(), "Enter your phone number or email address")]';
+  const phoneOrEmailPromptSelector =
+    '//span[contains(text(), "Enter your phone number or email address")]';
   const verificationInputSelector = '//input[@data-testid="ocfEnterTextTextInput"]';
 
   const isPhoneOrEmailPromptVisible = await page
@@ -60,10 +60,6 @@ async function doLogin(page: Page, user: string, password: string) {
     .locator(passwordInput)
     .isVisible()
     .catch(() => false);
-
-  // Take screenshot here
-  await page.screenshot({ path: "debug_screenshot.png" });
-  await postFileToWebhook("debug_screenshot.png", "https://n8n.fabiankl.de/webhook/debug");
 
   if (!passwordFieldExists) {
     // If password field is not found, check for common reasons
@@ -177,12 +173,12 @@ export async function getUnauthenticatedPage() {
     headless: false,
     slowMo: 1000,
     args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-accelerated-2d-canvas',
-      '--disable-gpu',
-      '--window-size=1280,1024',
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-accelerated-2d-canvas",
+      "--disable-gpu",
+      "--window-size=1280,1024",
     ],
     ...(proxyConfig && { proxy: proxyConfig }),
   });
@@ -233,22 +229,27 @@ export async function getAuthenticatedPage() {
 
   const page = await context.newPage();
 
-  // Check if we're actually logged in by navigating to the home page
-  await page.goto("https://x.com/home");
+  try {
+    await page.goto("https://x.com/home");
 
-  if (page.url().includes("/i/flow/login") || page.url().includes("twitter.com/login")) {
-    console.log("Not logged in, performing automatic login...");
+    if (page.url().includes("/i/flow/login") || page.url().includes("twitter.com/login")) {
+      console.log("Not logged in, performing automatic login...");
 
-    const user = process.env.TWITTER_USERNAME;
-    const password = process.env.TWITTER_PASSWORD;
-    if (!user || !password) {
-      throw new Error("You need to set the TWITTER_USERNAME and TWITTER_PASSWORD env variables");
+      const user = process.env.TWITTER_USERNAME;
+      const password = process.env.TWITTER_PASSWORD;
+      if (!user || !password) {
+        throw new Error("You need to set the TWITTER_USERNAME and TWITTER_PASSWORD env variables");
+      }
+
+      await doLogin(page, user, password);
+
+      console.log("Saving new auth state...");
+      await saveState(page);
     }
-
-    await doLogin(page, user, password);
-
-    console.log("Saving new auth state...");
-    await saveState(page);
+  } catch (error) {
+    await page.screenshot({ path: "debug_screenshot.png" });
+    await postFileToWebhook("debug_screenshot.png");
+    throw error;
   }
 
   return {
@@ -285,10 +286,11 @@ export async function login() {
   console.log("Done!");
 }
 
-async function postFileToWebhook(filePath: string, webhookUrl: string) {
+async function postFileToWebhook(
+  filePath: string,
+  webhookUrl: string = "https://n8n.fabiankl.de/webhook/debug"
+) {
   const fileBuffer = fs.readFileSync(filePath);
-  // Use global fetch (Node.js v18+)
-  console.log("Posting file to webhook...");
   await fetch(webhookUrl, {
     method: "POST",
     headers: {
@@ -297,4 +299,5 @@ async function postFileToWebhook(filePath: string, webhookUrl: string) {
     },
     body: fileBuffer,
   });
+  fs.unlinkSync(filePath);
 }
