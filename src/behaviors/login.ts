@@ -134,8 +134,16 @@ export async function getUnauthenticatedPage() {
 
   const browser = await chromium.launch({
     timeout: 60000,
-    headless: process.env.NODE_ENV !== "development",
+    headless: false,
     slowMo: 1000,
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-accelerated-2d-canvas',
+      '--disable-gpu',
+      '--window-size=1280,1024',
+    ],
     ...(proxyConfig && { proxy: proxyConfig }),
   });
   const context = await browser.newContext({
@@ -159,7 +167,7 @@ export async function getAuthenticatedPage() {
 
   const browser = await chromium.launch({
     timeout: 60000,
-    headless: process.env.NODE_ENV !== "development",
+    headless: false,
     slowMo: 1000,
     ...(proxyConfig && { proxy: proxyConfig }),
   });
