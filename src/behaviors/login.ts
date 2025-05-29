@@ -29,7 +29,7 @@ const authFile = "playwright/.auth/twitter.json";
 export async function getUnauthenticatedPage() {
   const browser = await chromium.launch({
     timeout: 60000,
-    headless: false,
+    headless: process.env.NODE_ENV !== 'development',
     slowMo: 1000,
   });
   const context = await browser.newContext({
@@ -51,7 +51,7 @@ export async function getUnauthenticatedPage() {
 export async function getAuthenticatedPage() {
   const browser = await chromium.launch({
     timeout: 60000,
-    headless: false,
+    headless: process.env.NODE_ENV !== 'development',
     slowMo: 1000,
   });
   
