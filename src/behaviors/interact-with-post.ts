@@ -219,27 +219,35 @@ export async function replyToPost(page: Page, postUrl: string, replyText: string
 export async function postTweet(page: Page, tweet: TweetWithMedia) {
   await goHome(page);
 
-  // click tweet
+  console.log("Clicking tweet...");
   await page.click("a[href='/compose/post']");
 
-  // Upload media if provided
   if (tweet.media && tweet.media.length > 0) {
+    console.log("Uploading media...");
     await uploadMedia(page, tweet.media);
   }
 
-  // type tweet
+  console.log("Typing tweet...");
   await page.fill(
     "//div[@data-viewportview='true']//div[@class='DraftEditor-editorContainer']/div[@role='textbox']",
     tweet.text
   );
 
-  // click post
+  console.log("Clicking post...");
   await page.click("//span[contains(text(), 'Post')]");
 
-  // wait for tweet
-  await page.waitForURL("https://x.com/home");
+  const duplicateErrorLocator = page.locator('//span[contains(text(), "Whoops! You already said that.")]');
+  const isDuplicate = await duplicateErrorLocator.isVisible({ timeout: 2000 }).catch(() => false);
+  if (isDuplicate) {
+    throw new Error(
+      "Twitter/X rejected this tweet as a duplicate: 'Whoops! You already said that.' Please change the tweet text and try again."
+    );
+  }
+
+  console.log("Waiting for tweet...");
   await page.waitForTimeout(r(1000, 2500));
 
+  console.log("Simulating random behaviour...");
   await simulateRandomBehaviour(page);
 }
 

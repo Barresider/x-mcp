@@ -36,5 +36,4 @@ COPY src/behaviors ./src/behaviors
 COPY src/scrapers ./src/scrapers
 COPY test.jpg ./
 
-# Start the CLI application by default with better error handling
-CMD echo "Starting application..." && node dist/mcp.js
+CMD node dist/mcp.js
