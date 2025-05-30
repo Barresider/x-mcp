@@ -143,13 +143,17 @@ PROXY_PASSWORD=proxy_password               # Optional: separate password
 # Optional: MCP server configuration
 MCP_TRANSPORT=stdio           # Options: stdio, sse, http
 MCP_PORT=3000                # Port for HTTP/SSE transport
+
+# Optional: Directory for authentication state (default: playwright/.auth)
+AUTH_DIR=playwright/.auth
 ```
 
 ### Authentication Setup
 
-1. Create authentication directory:
+1. (Optional) Create authentication directory or set `AUTH_DIR` environment variable:
 ```bash
-mkdir -p playwright/.auth
+export AUTH_DIR=/path/to/auth/dir
+mkdir -p "${AUTH_DIR:-playwright/.auth}"
 ```
 
 2. Login to X/Twitter (stores session for reuse):
@@ -248,7 +252,7 @@ interface PostMetrics {
 
 ### Authentication
 - Store credentials securely in environment variables
-- Session data is stored in `playwright/.auth/` directory
+- Session data is stored in the directory specified by the `AUTH_DIR` environment variable (default `playwright/.auth/`)
 - Regular re-authentication may be required
 
 ### Error Handling

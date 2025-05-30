@@ -3,6 +3,7 @@ import "dotenv/config";
 import { Page } from "playwright";
 import { chromium, devices } from "playwright-extra";
 import StealthPlugin from "puppeteer-extra-plugin-stealth";
+import path from "path";
 
 chromium.use(StealthPlugin());
 
@@ -129,7 +130,8 @@ async function doLogin(page: Page, user: string, password: string) {
   }
 }
 
-const authFile = "playwright/.auth/twitter.json";
+const authDir = process.env.AUTH_DIR || "playwright/.auth";
+const authFile = path.join(authDir, "twitter.json");
 
 function getProxyConfig() {
   const proxyUrl = process.env.PROXY_URL;
@@ -160,7 +162,7 @@ function getProxyConfig() {
   };
 }
 
-export async function getUnauthenticatedPage() {
+async function createBrowser() {
   const proxyConfig = getProxyConfig();
 
   const browser = await chromium.launch({
@@ -175,6 +177,12 @@ export async function getUnauthenticatedPage() {
     ],
     ...(proxyConfig && { proxy: proxyConfig }),
   });
+
+  return browser;
+}
+
+export async function getUnauthenticatedPage() {
+  const browser = await createBrowser();
   const context = await browser.newContext({
     ...devices["Desktop Chrome"],
     locale: "en-US",
@@ -192,20 +200,7 @@ export async function getUnauthenticatedPage() {
 }
 
 export async function getAuthenticatedPage() {
-  const proxyConfig = getProxyConfig();
-
-  const browser = await chromium.launch({
-    timeout: 60000,
-    headless: process.env.NODE_ENV !== "development",
-    slowMo: 1000,
-    args: [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-      "--disable-accelerated-2d-canvas",
-    ],
-    ...(proxyConfig && { proxy: proxyConfig }),
-  });
+  const browser = await createBrowser();
 
   let context;
   try {
