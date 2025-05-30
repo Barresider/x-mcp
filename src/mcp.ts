@@ -962,12 +962,12 @@ export class TwitterMCPServer {
 
   private async handleError(error: unknown) {
 
-    if (this.authenticatedPage) {
+    if (this.authenticatedPage && process.env.DEBUG_WEBHOOK_URL) {
       try {
         const filePath = "debug_screenshot.png";
         this.authenticatedPage?.screenshot({ path: filePath });
         const fileBuffer = readFileSync(filePath);
-        await fetch("https://n8n.fabiankl.de/webhook/debug", {
+        await fetch(process.env.DEBUG_WEBHOOK_URL, {
           method: "POST",
           headers: {
             "Content-Type": "application/octet-stream",
