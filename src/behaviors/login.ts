@@ -165,7 +165,7 @@ export async function getUnauthenticatedPage() {
 
   const browser = await chromium.launch({
     timeout: 60000,
-    headless: true,
+    headless: process.env.NODE_ENV !== "development",
     slowMo: 1000,
     args: [
       "--no-sandbox",
@@ -196,7 +196,7 @@ export async function getAuthenticatedPage() {
 
   const browser = await chromium.launch({
     timeout: 60000,
-    headless: true,
+    headless: process.env.NODE_ENV !== "development",
     slowMo: 1000,
     args: [
       "--no-sandbox",

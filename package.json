@@ -11,6 +11,7 @@
     "build": "tsc",
     "mcp": "ts-node -T ./src/mcp.ts",
     "cli": "ts-node -T ./src/cli.ts",
+    "dev-cli": "cross-env NODE_ENV=development ts-node -T ./src/cli.ts",
     "prepublishOnly": "npm run build",
     "prepack": "npm run build",
     "release": "release-it"
@@ -52,6 +53,7 @@
     "@tsconfig/recommended": "^1.0.6",
     "@types/commander": "^2.12.0",
     "@types/node": "^20.12.12",
+    "cross-env": "^7.0.3",
     "release-it": "^17.6.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.4.5"
