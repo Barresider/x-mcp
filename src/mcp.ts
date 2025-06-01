@@ -279,38 +279,26 @@ export class TwitterMCPServer {
             type: "object",
             properties: {
               tweets: {
-                oneOf: [
-                  {
-                    type: "array",
-                    description: "Array of tweet texts for the thread",
-                    items: {
+                type: "array",
+                description: "Array of tweet objects with text and optional media",
+                items: {
+                  type: "object",
+                  properties: {
+                    text: {
                       type: "string",
+                      description: "Tweet text",
                     },
-                    minItems: 2,
-                  },
-                  {
-                    type: "array",
-                    description: "Array of tweet objects with text and optional media",
-                    items: {
-                      type: "object",
-                      properties: {
-                        text: {
-                          type: "string",
-                          description: "Tweet text",
-                        },
-                        media: {
-                          type: "array",
-                          description: "Media files for this tweet",
-                          items: {
-                            type: "string",
-                          },
-                        },
+                    media: {
+                      type: "array",
+                      description: "Media files for this tweet",
+                      items: {
+                        type: "string",
                       },
-                      required: ["text"],
                     },
-                    minItems: 2,
                   },
-                ],
+                  required: ["text"],
+                },
+                minItems: 2,
               },
             },
             required: ["tweets"],
