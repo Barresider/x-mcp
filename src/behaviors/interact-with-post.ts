@@ -279,8 +279,7 @@ async function simulateRandomBehaviour(page: Page) {
 }
 
 async function fillForThread(page: Page, text: string) {
-  console.log("Filling tweet...");
-  await page.keyboard.insertText(text);
+  await page.keyboard.type(text)
   await waitSecs(page);
 }
 
