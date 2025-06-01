@@ -744,28 +744,12 @@ export class TwitterMCPServer {
       throw new McpError(ErrorCode.InvalidParams, `Invalid parameters: ${result.error.message}`);
     }
 
-    // Convert to TweetWithMedia array if needed
-    let tweetsToPost: TweetWithMedia[];
-
-    if (Array.isArray(result.data.tweets)) {
-      if (result.data.tweets.length > 0 && typeof result.data.tweets[0] === "string") {
-        // Convert string array to TweetWithMedia array
-        tweetsToPost = (result.data.tweets as string[]).map((text) => ({ text }));
-      } else {
-        // Already TweetWithMedia array
-        tweetsToPost = result.data.tweets as TweetWithMedia[];
-      }
-    } else {
-      throw new McpError(ErrorCode.InvalidParams, "Invalid tweets format");
-    }
-
-    // Pass the tweets array to the thread function
     const page = await this.ensureAuthenticated();
-    await postThread(page, tweetsToPost);
+    await postThread(page, result.data.tweets);
 
     // Count tweets and media
     let mediaCount = 0;
-    tweetsToPost.forEach((tweet) => {
+    result.data.tweets.forEach((tweet) => {
       if (tweet.media && Array.isArray(tweet.media)) {
         mediaCount += tweet.media.length;
       }
@@ -775,7 +759,7 @@ export class TwitterMCPServer {
       content: [
         {
           type: "text",
-          text: `Thread posted successfully with ${tweetsToPost.length} tweets${
+          text: `Thread posted successfully with ${result.data.tweets.length} tweets${
             mediaCount > 0 ? ` and ${mediaCount} media file(s)` : ""
           }`,
         },
