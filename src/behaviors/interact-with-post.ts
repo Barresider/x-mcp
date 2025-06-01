@@ -279,18 +279,14 @@ async function simulateRandomBehaviour(page: Page) {
 }
 
 async function fillForThread(page: Page, text: string) {
+  console.log("Filling tweet...");
   await page.keyboard.type(text)
-  await waitSecs(page);
 }
 
 async function postAllForThread(page: Page) {
   console.log("Posting all...");
-  const tabs = 8;
-  for (let i = 0; i < tabs; i++) {
-    await page.keyboard.press("Tab");
-  }
-
-  await page.keyboard.press("Enter");
+  const postButton = page.locator('[data-testid="tweetButton"]');
+  await postButton.click();
 
   const isDuplicate = await page
     .waitForSelector("text=Whoops! You already said that.", { timeout: 2000 })
@@ -303,17 +299,14 @@ async function postAllForThread(page: Page) {
   }
 }
 
-async function addTweetForThread(page: Page, firstTime: boolean) {
-  const tabs = firstTime ? 8 : 7;
-  for (let i = 0; i < tabs; i++) {
-    await page.keyboard.press("Tab");
-  }
-
-  await page.keyboard.press("Enter");
+async function addTweetForThread(page: Page) {
+  // Direct click on the add button instead of tabbing
+  const addButton = page.locator('[data-testid="addButton"]');
+  await addButton.click();
+  await page.waitForTimeout(r(50, 300));
 }
 
 async function composeThread(page: Page, tweets: TweetWithMedia[]) {
-  let firstTime = true;
   do {
     const tweet = tweets.shift();
     if (tweet) {
@@ -326,8 +319,7 @@ async function composeThread(page: Page, tweets: TweetWithMedia[]) {
     }
 
     if (tweets.length > 0) {
-      await addTweetForThread(page, firstTime);
-      firstTime = false;
+      await addTweetForThread(page);
     }
   } while (tweets.length > 0);
   console.log("All tweets filled!");
@@ -347,7 +339,6 @@ export async function postThread(page: Page, tweets: TweetWithMedia[]): Promise<
   const tweetsCopy = [...tweets];
 
   await goHome(page);
-  await waitSecs(page);
 
   await clickCompose(page);
   await composeThread(page, tweetsCopy);
