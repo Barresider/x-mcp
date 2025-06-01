@@ -278,9 +278,68 @@ async function simulateRandomBehaviour(page: Page) {
   }
 }
 
-async function fillForThread(page: Page, text: string) {
-  console.log("Filling tweet...");
-  await page.keyboard.type(text)
+async function fillForThread(page: Page, text: string, tweetIndex: number = 0) {
+  console.log(`Filling tweet ${tweetIndex + 1}...`);
+
+  // Method 1: Target text areas within the compose modal/dialog
+  // The compose modal is identified by the mask overlay
+  const modalSelector = '[data-testid="mask"]';
+  const dialogSelector = '[role="dialog"][aria-modal="true"]';
+
+  // First, ensure we're in a modal context
+  const isModalOpen =
+    (await page
+      .locator(modalSelector)
+      .isVisible()
+      .catch(() => false)) ||
+    (await page
+      .locator(dialogSelector)
+      .isVisible()
+      .catch(() => false));
+
+  if (!isModalOpen) {
+    throw new Error("Compose modal not detected");
+  }
+
+  // Target text areas specifically within the modal/dialog
+  // This excludes the timeline compose box
+  const textAreaInModal = page
+    .locator(`${dialogSelector} [data-testid="tweetTextarea_${tweetIndex}"]`)
+    .or(page.locator(`${modalSelector} ~ div [data-testid="tweetTextarea_${tweetIndex}"]`));
+
+  if (await textAreaInModal.isVisible()) {
+    await textAreaInModal.click();
+    await textAreaInModal.fill(text);
+    await waitSecs(page);
+    return;
+  }
+
+  // Method 2: Use contenteditable divs within the modal
+  const editableDivsInModal = page.locator(
+    `${dialogSelector} div[contenteditable="true"][role="textbox"]`
+  );
+  const targetDiv = editableDivsInModal.nth(tweetIndex);
+
+  if (await targetDiv.isVisible()) {
+    await targetDiv.click();
+    await targetDiv.fill(text);
+    await waitSecs(page);
+    return;
+  }
+
+  // Method 3: Look for the DraftEditor pattern within the modal
+  const draftEditorInModal = page
+    .locator(
+      `${dialogSelector} div[data-viewportview='true'] div.DraftEditor-editorContainer div[role='textbox']`
+    )
+    .nth(tweetIndex);
+
+  if (await draftEditorInModal.isVisible()) {
+    await draftEditorInModal.click();
+    await draftEditorInModal.fill(text);
+    await waitSecs(page);
+    return;
+  }
 }
 
 async function postAllForThread(page: Page) {
@@ -300,13 +359,16 @@ async function postAllForThread(page: Page) {
 }
 
 async function addTweetForThread(page: Page) {
-  // Direct click on the add button instead of tabbing
   const addButton = page.locator('[data-testid="addButton"]');
   await addButton.click();
-  await page.waitForTimeout(r(50, 300));
 }
 
 async function composeThread(page: Page, tweets: TweetWithMedia[]) {
+  // Wait for the compose modal to be fully loaded
+  await page.waitForSelector('[role="dialog"][aria-modal="true"]', { timeout: 5000 });
+
+  let tweetIndex = 0;
+
   do {
     const tweet = tweets.shift();
     if (tweet) {
@@ -315,13 +377,15 @@ async function composeThread(page: Page, tweets: TweetWithMedia[]) {
         await uploadMedia(page, tweet.media);
       }
 
-      await fillForThread(page, tweet.text);
+      await fillForThread(page, tweet.text, tweetIndex);
+      tweetIndex++;
     }
 
     if (tweets.length > 0) {
       await addTweetForThread(page);
     }
   } while (tweets.length > 0);
+
   console.log("All tweets filled!");
 }
 
@@ -335,6 +399,12 @@ export async function postThread(page: Page, tweets: TweetWithMedia[]): Promise<
     throw new Error("A thread must contain at least 2 tweets");
   }
 
+  for (const tweet of tweets) {
+    if (tweet.text.length > 280) {
+      throw new Error("A tweet cannot be longer than 280 characters");
+    }
+  }
+
   // Make a copy to avoid mutating the original array
   const tweetsCopy = [...tweets];
 
@@ -343,7 +413,7 @@ export async function postThread(page: Page, tweets: TweetWithMedia[]): Promise<
   await clickCompose(page);
   await composeThread(page, tweetsCopy);
   await postAllForThread(page);
-  await waitSecs(page);
+  await waitSecs(page, 1000, 2000);
 
   await goHome(page);
   await scrollDown(page);
@@ -351,7 +421,7 @@ export async function postThread(page: Page, tweets: TweetWithMedia[]): Promise<
   await saveState(page);
 
   const composeOpenThread = await page
-    .locator('[data-testid=mask]')
+    .locator("[data-testid=mask]")
     .isVisible()
     .catch(() => false);
   if (composeOpenThread) {
