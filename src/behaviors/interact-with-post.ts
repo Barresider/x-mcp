@@ -251,7 +251,7 @@ export async function postTweet(page: Page, tweet: TweetWithMedia) {
   }
 
   console.log("Waiting for tweet...");
-  await page.waitForTimeout(r(1000, 2500));
+  await page.waitForTimeout(r(250, 1250));
 
   console.log("Simulating random behaviour...");
   await simulateRandomBehaviour(page);
@@ -274,7 +274,7 @@ async function simulateRandomBehaviour(page: Page) {
   const times = r(2, 5);
   for (let i = 0; i < times; i++) {
     await page.mouse.wheel(0, r(100, 500));
-    await page.waitForTimeout(r(1000, 2500));
+    await page.waitForTimeout(r(250, 1250));
   }
 }
 
@@ -286,16 +286,26 @@ async function fillForThread(page: Page, text: string) {
 
 async function postAllForThread(page: Page) {
   console.log("Posting all...");
-  const tabs = 7;
+  const tabs = 8;
   for (let i = 0; i < tabs; i++) {
     await page.keyboard.press("Tab");
   }
 
   await page.keyboard.press("Enter");
+
+  const isDuplicate = await page
+    .waitForSelector("text=Whoops! You already said that.", { timeout: 2000 })
+    .then(() => true)
+    .catch(() => false);
+  if (isDuplicate) {
+    throw new Error(
+      "Twitter/X rejected this tweet as a duplicate: 'Whoops! You already said that.' Please change the tweet text and try again."
+    );
+  }
 }
 
 async function addTweetForThread(page: Page, firstTime: boolean) {
-  const tabs = firstTime ? 7 : 6;
+  const tabs = firstTime ? 8 : 7;
   for (let i = 0; i < tabs; i++) {
     await page.keyboard.press("Tab");
   }
@@ -349,7 +359,6 @@ export async function postThread(page: Page, tweets: TweetWithMedia[]): Promise<
   await scrollDown(page);
 
   await saveState(page);
-  await close();
 
   const composeOpenThread = await page
     .locator('[data-testid=mask]')
