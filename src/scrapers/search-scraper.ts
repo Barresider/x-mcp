@@ -2,6 +2,7 @@ import { Page } from "playwright";
 import { TwitterPost, SearchOptions, ScrapeOptions } from "../types";
 import { waitForTwitterReady, dismissPopups } from "./utils";
 import { scrapePosts } from "./post-scraper";
+import { fetchXquikTrends, isXquikConfigured, searchWithXquik } from "./xquik-client";
 
 /**
  * Build advanced search URL from options
@@ -80,6 +81,12 @@ export async function searchTwitter(
   searchOptions: SearchOptions,
   scrapeOptions: ScrapeOptions = {}
 ): Promise<TwitterPost[]> {
+  if (isXquikConfigured()) {
+    const posts = await searchWithXquik(searchOptions, scrapeOptions);
+    console.log(`Found ${posts.length} posts with Xquik`);
+    return posts;
+  }
+
   const searchUrl = buildSearchUrl(searchOptions);
   
   console.log('Searching with URL:', searchUrl);
@@ -164,6 +171,10 @@ export const SearchPresets = {
  * Search for trending topics
  */
 export async function scrapeTrendingTopics(page: Page): Promise<string[]> {
+  if (isXquikConfigured()) {
+    return fetchXquikTrends();
+  }
+
   await page.goto('https://x.com/explore');
   await waitForTwitterReady(page);
   await dismissPopups(page);
@@ -188,4 +199,4 @@ export async function scrapeTrendingTopics(page: Page): Promise<string[]> {
   }
   
   return trends;
-} 
+}

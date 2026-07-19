@@ -5,6 +5,7 @@ import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import express from "express";
 import {
   CallToolRequestSchema,
+  CallToolResult,
   ErrorCode,
   ListToolsRequestSchema,
   McpError,
@@ -26,6 +27,7 @@ import {
   searchTwitter,
 } from "./scrapers";
 import { TweetWithMedia } from "./types";
+import { packageVersion } from "./version";
 
 // Import post interaction functions
 import {
@@ -204,7 +206,7 @@ export class TwitterMCPServer {
     this.server = new Server(
       {
         name: "twitter-playwright-mcp",
-        version: "1.0.0",
+        version: packageVersion,
       },
       {
         capabilities: {
@@ -642,63 +644,69 @@ export class TwitterMCPServer {
     }));
 
     // Handle tool execution
-    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      const { name, arguments: args } = request.params;
-      console.error(`Tool called: ${name}`, args);
+    this.server.setRequestHandler(
+      CallToolRequestSchema,
+      async (request): Promise<CallToolResult> => {
+        const { name, arguments: args } = request.params;
+        console.error(`Tool called: ${name}`, args);
 
-      try {
-        switch (name) {
-          case "tweet":
-            return await this.handleTweet(args);
-          case "thread":
-            return await this.handleThread(args);
-          case "scrape_posts":
-            return await this.handleScrapePosts(args);
-          case "scrape_profile":
-            return await this.handleScrapeProfile(args);
-          case "scrape_comments":
-            return await this.handleScrapeComments(args);
-          case "search_twitter":
-            return await this.handleSearchTwitter(args);
-          case "search_viral":
-            return await this.handleSearchViral(args);
-          case "scrape_timeline":
-            return await this.handleScrapeTimeline(args);
-          case "scrape_trending":
-            return await this.handleScrapeTrending();
-          // Post interaction tools
-          case "like_post":
-            return await this.handleLikePost(args);
-          case "unlike_post":
-            return await this.handleUnlikePost(args);
-          case "bookmark_post":
-            return await this.handleBookmarkPost(args);
-          case "unbookmark_post":
-            return await this.handleUnbookmarkPost(args);
-          case "retweet_post":
-            return await this.handleRetweetPost(args);
-          case "unretweet_post":
-            return await this.handleUnretweetPost(args);
-          case "quote_tweet":
-            return await this.handleQuoteTweet(args);
-          case "reply_to_post":
-            return await this.handleReplyToPost(args);
-          // Comment interaction tools
-          case "like_comment_by_id":
-            return await this.handleLikeCommentById(args);
-          case "unlike_comment_by_id":
-            return await this.handleUnlikeCommentById(args);
-          case "reply_to_comment_by_id":
-            return await this.handleReplyToCommentById(args);
-          case "replace_comment_by_id":
-            return await this.handleReplaceCommentById(args);
-          default:
-            throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
+        try {
+          switch (name) {
+            case "tweet":
+              return await this.handleTweet(args);
+            case "thread":
+              return await this.handleThread(args);
+            case "scrape_posts":
+              return await this.handleScrapePosts(args);
+            case "scrape_profile":
+              return await this.handleScrapeProfile(args);
+            case "scrape_comments":
+              return await this.handleScrapeComments(args);
+            case "search_twitter":
+              return await this.handleSearchTwitter(args);
+            case "search_viral":
+              return await this.handleSearchViral(args);
+            case "scrape_timeline":
+              return await this.handleScrapeTimeline(args);
+            case "scrape_trending":
+              return await this.handleScrapeTrending();
+            // Post interaction tools
+            case "like_post":
+              return await this.handleLikePost(args);
+            case "unlike_post":
+              return await this.handleUnlikePost(args);
+            case "bookmark_post":
+              return await this.handleBookmarkPost(args);
+            case "unbookmark_post":
+              return await this.handleUnbookmarkPost(args);
+            case "retweet_post":
+              return await this.handleRetweetPost(args);
+            case "unretweet_post":
+              return await this.handleUnretweetPost(args);
+            case "quote_tweet":
+              return await this.handleQuoteTweet(args);
+            case "reply_to_post":
+              return await this.handleReplyToPost(args);
+            // Comment interaction tools
+            case "like_comment_by_id":
+              return await this.handleLikeCommentById(args);
+            case "unlike_comment_by_id":
+              return await this.handleUnlikeCommentById(args);
+            case "reply_to_comment_by_id":
+              return await this.handleReplyToCommentById(args);
+            case "replace_comment_by_id":
+              return await this.handleReplaceCommentById(args);
+            default:
+              throw new McpError(
+                ErrorCode.MethodNotFound,
+                `Unknown tool: ${name}`
+              );
+          }
+        } catch (error) {
+          return this.handleError(error);
         }
-      } catch (error) {
-        return this.handleError(error);
       }
-    });
+    );
   }
 
   // Tool handlers
@@ -1012,7 +1020,7 @@ export class TwitterMCPServer {
     if (this.authenticatedPage && process.env.DEBUG_WEBHOOK_URL) {
       try {
         const filePath = "debug_screenshot.png";
-        this.authenticatedPage?.screenshot({ path: filePath });
+        await this.authenticatedPage.screenshot({ path: filePath });
         const fileBuffer = readFileSync(filePath);
         await fetch(process.env.DEBUG_WEBHOOK_URL, {
           method: "POST",
@@ -1020,7 +1028,7 @@ export class TwitterMCPServer {
             "Content-Type": "application/octet-stream",
             "Content-Disposition": `attachment; filename=\"${filePath}\"`,
           },
-          body: fileBuffer,
+          body: new Uint8Array(fileBuffer),
         });
         unlinkSync(filePath);
       } catch {}
