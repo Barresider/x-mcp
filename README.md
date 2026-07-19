@@ -144,9 +144,20 @@ PROXY_PASSWORD=proxy_password               # Optional: separate password
 MCP_TRANSPORT=stdio           # Options: stdio, sse, http
 MCP_PORT=3000                # Port for HTTP/SSE transport
 
+# Optional: Xquik read backend for search_twitter and scrape_trending
+XQUIK_API_KEY=your_xquik_api_key
+XQUIK_BASE_URL=https://xquik.com/api/v1
+
 # Optional: Directory for authentication state (default: playwright/.auth)
 AUTH_DIR=playwright/.auth
 ```
+
+When `XQUIK_API_KEY` is set, `search_twitter` and `scrape_trending` use
+[Xquik](https://xquik.com) instead of browser scraping. Login, posting,
+replying, bookmarking, and other browser actions keep using the existing
+Playwright flow.
+
+Xquik is an independent third-party service. Not affiliated with X Corp. "Twitter" and "X" are trademarks of X Corp.
 
 ### Authentication Setup
 
